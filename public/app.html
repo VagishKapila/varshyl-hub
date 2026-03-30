@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Varshyl Business Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --primary-bg: rgba(99,102,241,0.08);
+      --bg: #fafafe;
+      --card: #ffffff;
+      --card-border: #e8e8f0;
+      --text: #1a1a2e;
+      --text-secondary: #555;
+      --text-muted: #888;
+      --success: #059669;
+      --success-bg: #ecfdf5;
+      --warning: #d97706;
+      --warning-bg: #fffbeb;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --shadow-1: 0 4px 24px rgba(99,102,241,0.08);
+      --shadow-2: 0 8px 32px rgba(99,102,241,0.14);
+      --radius: 12px;
+      --sidebar-w: 240px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ═══ AUTH SCREEN ═══ */
+    #auth-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    }
+    .auth-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .auth-logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .auth-logo p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .auth-logo .logo-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+      font-size: 28px;
+      color: #fff;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 2px solid var(--card-border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .form-group input:focus { border-color: var(--primary); }
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,0.3); }
+    .auth-error {
+      background: var(--danger-bg);
+      color: var(--danger);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    #setup-note {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ═══ APP LAYOUT ═══ */
+    #app { display: none; min-height: 100vh; }
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* ═══ SIDEBAR ═══ */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--card);
+      border-right: 2px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .sidebar-logo h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-logo h2 .s-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #fff;
+    }
+    .sidebar-logo small {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      display: block;
+      margin-top: 2px;
+      margin-left: 42px;
+    }
+    .sidebar-nav {
+      flex: 1;
+      padding: 12px 10px;
+      overflow-y: auto;
+    }
+    .nav-section {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 16px 10px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+    }
+    .nav-item:hover { background: var(--primary-bg); color: var(--text); }
+    .nav-item.active {
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-weight: 600;
+      border-left: 3px solid var(--primary);
+    }
+    .nav-item .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+    .nav-divider { height: 1px; background: var(--card-border); margin: 8px 10px; }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--card-border);
+      font-size: 12px;
+    }
+    .sidebar-footer .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-footer .user-avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .sidebar-footer .user-name { font-weight: 600; color: var(--text); }
+    .sidebar-footer .user-email { font-size: 11px; color: var(--text-muted); }
+    .btn-logout {
+      margin-top: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 4px 0;
+    }
+    .btn-logout:hover { color: var(--danger); }
+
+    /* ═══ MAIN CONTENT ═══ */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      padding: 28px 32px;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .page-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: 2px solid var(--card-border);
+      background: var(--card);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-sm.primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      border-color: transparent;
+    }
+    .btn-sm.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.25); }
+
+    /* ═══ KPI CARDS ═══ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all 0.15s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .kpi-card .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .kpi-card .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .kpi-card .kpi-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .kpi-card .kpi-icon { font-size: 24px; float: right; opacity: 0.5; }
+    .kpi-card.highlight { border-color: var(--primary); }
+    .kpi-card.success .kpi-value { color: var(--success); }
+    .kpi-card.warning .kpi-value { color: var(--warning); }
+    .kpi-card.danger .kpi-value { color: var(--danger); }
+
+    /* ═══ CHART CONTAINERS ═══ */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .chart-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .chart-card canvas { width: 100% !important; max-height: 260px; }
+
+    /* ═══ PRODUCT CARDS ═══ */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .product-card {
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .product-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); border-color: var(--primary-light); }
+    .product-card .pc-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .product-card .pc-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .product-card .pc-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .product-card .pc-url {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .product-card .pc-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .product-card .pc-stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+    .product-card .pc-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ═══ ALERTS BAR ═══ */
+    .alerts-section { margin-bottom: 24px; }
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .alert-item.critical { border-left: 4px solid var(--danger); }
+    .alert-item.warning { border-left: 4px solid var(--warning); }
+    .alert-item .alert-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .alert-item .alert-badge.critical { background: var(--danger-bg); color: var(--danger); }
+    .alert-item .alert-badge.warning { background: var(--warning-bg); color: var(--warning); }
+    .alert-item .alert-text { flex: 1; }
+    .alert-item .alert-product { font-size: 11px; color: var(--text-muted); }
+    .alert-item .alert-dismiss {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+    }
+    .alert-item .alert-dismiss:hover { color: var(--danger); }
+
+    /* ═══ TABLES ═══ */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--card-border);
+    }
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-secondary);
+    }
+    .data-table tr:hover td { background: var(--primary-bg); }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+    .badge.trial { background: #dbeafe; color: #1e40af; }
+    .badge.active { background: var(--success-bg); color: var(--success); }
+    .badge.free_override { background: #faf5ff; color: #7c3aed; }
+    .badge.canceled { background: var(--danger-bg); color: var(--danger); }
+    .badge.blocked { background: #fef2f2; color: #991b1b; }
+
+    /* ═══ DETAIL VIEW ═══ */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .detail-header .back-btn {
+      background: none;
+      border: 2px solid var(--card-border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-secondary);
+    }
+    .detail-header .back-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ═══ ACTION BUTTONS (user management) ═══ */
+    .action-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .action-btn.block { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+    .action-btn.block:hover { background: var(--danger); color: #fff; }
+    .action-btn.upgrade { border-color: var(--success); color: var(--success); background: var(--success-bg); }
+    .action-btn.upgrade:hover { background: var(--success); color: #fff; }
+    .action-btn.extend { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .action-btn.extend:hover { background: var(--primary); color: #fff; }
+
+    /* ═══ EMPTY STATE ═══ */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .empty-state .empty-icon {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 12px;
+    }
+    .empty-state h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; color: var(--text-muted); }
+
+    /* ═══ ADD PRODUCT MODAL ═══ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+    .modal .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    /* ═══ TOAST ═══ */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+    .toast {
+      background: var(--text);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      animation: slideIn 0.2s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ═══ HIDDEN ═══ */
+    .hidden { display: none !important; }
+
+    /* ═══ MOBILE ═══ */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; padding: 16px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .product-grid { grid-template-columns: 1fr; }
+      .modal .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ AUTH SCREEN ═══ -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="logo-icon">V</div>
+        <h1>Varshyl Business Hub</h1>
+        <p>Super Admin Command Center</p>
+      </div>
+      <div class="auth-error" id="auth-error"></div>
+      <div id="setup-form" class="hidden">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="setup-name" placeholder="Vagish Kapila">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="vaakapila@gmail.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="Enter password">
+      </div>
+      <button class="btn-primary" id="auth-btn" onclick="handleAuth()">Sign In</button>
+      <div id="setup-note"></div>
+    </div>
+  </div>
+
+  <!-- ═══ APP ═══ -->
+  <div id="app">
+    <div class="app-layout">
+      <!-- SIDEBAR -->
+      <nav class="sidebar">
+        <div class="sidebar-logo">
+          <h2><span class="s-icon">V</span> Varshyl Hub</h2>
+          <small>CEO Command Center</small>
+        </div>
+        <div class="sidebar-nav">
+          <div class="nav-section">Overview</div>
+          <button class="nav-item active" data-page="dashboard">
+            <span class="nav-icon">📊</span> Dashboard
+          </button>
+          <button class="nav-item" data-page="revenue">
+            <span class="nav-icon">💰</span> Revenue
+          </button>
+          <button class="nav-item" data-page="alerts">
+            <span class="nav-icon">🔔</span> Alerts
+            <span id="alert-count-badge" class="hidden" style="background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:auto;"></span>
+          </button>
+          <div class="nav-divider"></div>
+          <div class="nav-section">Products</div>
+          <div id="product-nav-items"></div>
+          <div class="nav-divider"></div>
+          <div class="nav-section">Settings</div>
+          <button class="nav-item" data-page="products-manage">
+            <span class="nav-icon">⚙️</span> Manage Products
+          </button>
+          <button class="nav-item" data-page="activity">
+            <span class="nav-icon">📋</span> Activity Log
+          </button>
+        </div>
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <div class="user-avatar" id="user-avatar">V</div>
+            <div>
+              <div class="user-name" id="user-name">Admin</div>
+              <div class="user-email" id="user-email">admin@varshyl.com</div>
+            </div>
+          </div>
+          <button class="btn-logout" onclick="logout()">Sign Out</button>
+        </div>
+      </nav>
+
+      <!-- MAIN -->
+      <main class="main-content">
+        <!-- DASHBOARD PAGE -->
+        <div id="page-dashboard" class="page">
+          <div class="page-header">
+            <div>
+              <h1>Dashboard</h1>
+              <div class="subtitle">Overview across all Varshyl products</div>
+            </div>
+            <div class="header-actions">
+              <button class="btn-sm" onclick="loadDashboard()">Refresh</button>
+              <button class="btn-sm primary" onclick="showAddProduct()">+ Add Product</button>
+            </div>
+          </div>
+          <div class="kpi-grid" id="kpi-grid"></div>
+          <div class="alerts-section" id="dashboard-alerts"></div>
+          <div class="product-grid" id="product-grid"></div>
+          <div class="chart-grid" id="chart-grid">
+            <div class="chart-card">
+              <h3>Revenue Trend (MRR)</h3>
+              <canvas id="chart-revenue"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>User Growth</h3>
+              <canvas id="chart-users"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- REVENUE PAGE -->
+        <div id="page-revenue" class="page hidden">
+          <div class="page-header">
+            <div>
+              <h1>Revenue</h1>
+              <div class="subtitle">Financial overview across all products</div>
+            </div>
+          </div>
+          <div class="kpi-grid" id="revenue-kpis"></div>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3>Monthly Revenue by Product</h3>
+              <canvas id="chart-revenue-detail"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Revenue Breakdown</h3>
+              <canvas id="chart-revenue-donut"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERTS PAGE -->
+        <div id="page-alerts" class="page hidden">
+          <div class="page-header">
+            <div>
+              <h1>Alerts</h1>
+              <div class="subtitle">Active issues across all products</div>
+            </div>
+          </div>
+          <div id="alerts-list"></div>
+        </div>
+
+        <!-- PRODUCT DETAIL PAGE -->
+        <div id="page-product-detail" class="page hidden">
+          <div class="detail-header">
+            <button class="back-btn" onclick="showPage('dashboard')">← Back</button>
+            <div>
+              <h1 id="detail-product-name"></h1>
+              <div class="subtitle" id="detail-product-url"></div>
+            </div>
+          </div>
+          <div class="kpi-grid" id="detail-kpis"></div>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <h3>30-Day MRR Trend</h3>
+              <canvas id="chart-detail-mrr"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>30-Day User Growth</h3>
+              <canvas id="chart-detail-users"></canvas>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Users</h3>
+            <div style="margin-bottom:12px;">
+              <input type="text" id="user-search" placeholder="Search by name or email..." style="padding:9px 14px;border:2px solid var(--card-border);border-radius:8px;font-size:13px;width:300px;font-family:inherit;" oninput="searchUsers()">
+            </div>
+            <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
+              <table class="data-table" id="users-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Plan</th>
+                    <th>Trial Ends</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- MANAGE PRODUCTS PAGE -->
+        <div id="page-products-manage" class="page hidden">
+          <div class="page-header">
+            <div>
+              <h1>Manage Products</h1>
+              <div class="subtitle">Register and configure Varshyl products</div>
+            </div>
+            <div class="header-actions">
+              <button class="btn-sm primary" onclick="showAddProduct()">+ Add Product</button>
+            </div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
+            <table class="data-table" id="products-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Product</th>
+                  <th>Slug</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th>API Key</th>
+                </tr>
+              </thead>
+              <tbody id="products-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ACTIVITY LOG PAGE -->
+        <div id="page-activity" class="page hidden">
+          <div class="page-header">
+            <div>
+              <h1>Activity Log</h1>
+              <div class="subtitle">Recent admin actions</div>
+            </div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Time</th><th>Product</th><th>Action</th><th>Details</th></tr>
+              </thead>
+              <tbody id="activity-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ═══ ADD PRODUCT MODAL ═══ -->
+  <div class="modal-overlay" id="add-product-modal">
+    <div class="modal">
+      <h2>Register New Product</h2>
+      <div class="form-group">
+        <label>Product Name</label>
+        <input type="text" id="prod-name" placeholder="ConstructInvoice AI">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Slug (unique ID)</label>
+          <input type="text" id="prod-slug" placeholder="constructinvoice">
+        </div>
+        <div class="form-group">
+          <label>Subscription ($/month)</label>
+          <input type="number" id="prod-price" placeholder="40" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Production URL</label>
+        <input type="text" id="prod-url" placeholder="https://constructinv.varshyl.com">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stripe Account ID</label>
+          <input type="text" id="prod-stripe" placeholder="acct_...">
+        </div>
+        <div class="form-group">
+          <label>Icon (emoji)</label>
+          <input type="text" id="prod-icon" placeholder="🏗️" maxlength="4">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-sm" onclick="hideAddProduct()">Cancel</button>
+        <button class="btn-sm primary" onclick="addProduct()">Register Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TOAST ═══ -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════
+    let token = null;
+    let currentUser = null;
+    let dashboardData = null;
+    let currentProductSlug = null;
+    let chartInstances = {};
+
+    const API = '';
+    const fmt = n => '$' + (n / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const fmtNum = n => (n || 0).toLocaleString('en-US');
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+    const fmtTime = d => d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-';
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // API HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+    async function api(method, path, body) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (token) opts.headers.Authorization = `Bearer ${token}`;
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(API + path, opts);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUTH
+    // ═══════════════════════════════════════════════════════════════════════
+    async function checkSetupNeeded() {
+      try {
+        const res = await fetch(API + '/api/auth/me', { headers: { Authorization: 'Bearer test' } });
+        // If we get 401, the server is running. Check if setup is needed by trying login with empty creds
+        // Actually, let's just show the login form and handle setup on the server side
+      } catch(e) {}
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const nameInput = document.getElementById('setup-name');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const errorEl = document.getElementById('auth-error');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Email and password required';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        // Try login first
+        const data = await api('POST', '/api/auth/login', { email, password });
+        token = data.data.token;
+        currentUser = data.data.user;
+        localStorage.setItem('vhub_token', token);
+        localStorage.setItem('vhub_user', JSON.stringify(currentUser));
+        showApp();
+      } catch(e) {
+        // If login fails, try setup (first-time)
+        if (name || document.getElementById('setup-form').classList.contains('hidden') === false) {
+          if (!name) {
+            document.getElementById('setup-form').classList.remove('hidden');
+            document.getElementById('auth-btn').textContent = 'Create Admin Account';
+            document.getElementById('setup-note').innerHTML = '<p>No admin account exists yet. Create one above.</p>';
+            errorEl.style.display = 'none';
+            return;
+          }
+          try {
+            const data = await api('POST', '/api/auth/setup', { name, email, password });
+            token = data.data.token;
+            currentUser = data.data.user;
+            localStorage.setItem('vhub_token', token);
+            localStorage.setItem('vhub_user', JSON.stringify(currentUser));
+            showApp();
+            toast('Admin account created!', 'success');
+          } catch(e2) {
+            errorEl.textContent = e2.message;
+            errorEl.style.display = 'block';
+          }
+        } else {
+          // Show setup option
+          if (e.message.includes('Invalid credentials')) {
+            errorEl.textContent = e.message;
+            errorEl.style.display = 'block';
+          } else {
+            document.getElementById('setup-form').classList.remove('hidden');
+            document.getElementById('auth-btn').textContent = 'Create Admin Account';
+            document.getElementById('setup-note').innerHTML = '<p>First time? Create your admin account.</p>';
+            errorEl.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    function logout() {
+      token = null;
+      currentUser = null;
+      localStorage.removeItem('vhub_token');
+      localStorage.removeItem('vhub_user');
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // APP INIT
+    // ═══════════════════════════════════════════════════════════════════════
+    function showApp() {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      if (currentUser) {
+        document.getElementById('user-name').textContent = currentUser.name;
+        document.getElementById('user-email').textContent = currentUser.email;
+        document.getElementById('user-avatar').textContent = (currentUser.name || 'A')[0].toUpperCase();
+      }
+      loadDashboard();
+    }
+
+    // Auto-login from saved token
+    (function init() {
+      const saved = localStorage.getItem('vhub_token');
+      const savedUser = localStorage.getItem('vhub_user');
+      if (saved && savedUser) {
+        token = saved;
+        currentUser = JSON.parse(savedUser);
+        // Verify token is still valid
+        api('GET', '/api/auth/me').then(() => {
+          showApp();
+        }).catch(() => {
+          logout();
+        });
+      }
+
+      // Navigation
+      document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => showPage(btn.dataset.page));
+      });
+
+      // Enter key on auth form
+      document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
+    })();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVIGATION
+    // ═══════════════════════════════════════════════════════════════════════
+    function showPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const pageEl = document.getElementById('page-' + page);
+      if (pageEl) pageEl.classList.remove('hidden');
+      const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
+      if (navEl) navEl.classList.add('active');
+
+      if (page === 'dashboard') loadDashboard();
+      else if (page === 'revenue') loadRevenue();
+      else if (page === 'alerts') loadAlerts();
+      else if (page === 'products-manage') loadProductsManage();
+      else if (page === 'activity') loadActivity();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DASHBOARD
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadDashboard() {
+      try {
+        const { data } = await api('GET', '/api/dashboard');
+        dashboardData = data;
+        renderKPIs(data.kpis);
+        renderProductCards(data.products);
+        renderDashboardAlerts(data.alerts);
+        renderProductNav(data.products);
+        loadCharts();
+      } catch(e) {
+        console.error('Dashboard load failed:', e);
+        toast('Failed to load dashboard', 'error');
+      }
+    }
+
+    function renderKPIs(k) {
+      const grid = document.getElementById('kpi-grid');
+      grid.innerHTML = `
+        <div class="kpi-card highlight">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-label">Monthly Recurring Revenue</div>
+          <div class="kpi-value">${fmt(k.mrr_cents)}</div>
+          <div class="kpi-sub">ARR: ${fmt(k.arr_cents)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">👥</div>
+          <div class="kpi-label">Total Users</div>
+          <div class="kpi-value">${fmtNum(k.total_users)}</div>
+          <div class="kpi-sub">${fmtNum(k.active_users_24h)} active today</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-icon">⭐</div>
+          <div class="kpi-label">Pro Subscribers</div>
+          <div class="kpi-value">${fmtNum(k.pro_users)}</div>
+          <div class="kpi-sub">${fmtNum(k.trial_users)} on trial</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">📦</div>
+          <div class="kpi-label">Products</div>
+          <div class="kpi-value">${k.product_count}</div>
+          <div class="kpi-sub">${fmtNum(k.signups_24h)} signups today</div>
+        </div>
+        ${k.errors_24h > 0 ? `<div class="kpi-card danger">
+          <div class="kpi-icon">⚠️</div>
+          <div class="kpi-label">Errors (24h)</div>
+          <div class="kpi-value">${fmtNum(k.errors_24h)}</div>
+        </div>` : ''}
+      `;
+    }
+
+    function renderProductCards(products) {
+      const grid = document.getElementById('product-grid');
+      if (!products.length) {
+        grid.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h3>No products registered</h3>
+          <p>Add your first product to start tracking metrics.</p>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = products.map(({ product: p, metrics: m }) => `
+        <div class="product-card" onclick="showProductDetail('${p.slug}')">
+          <div class="pc-header">
+            <div class="pc-icon" style="background:${p.color}15;color:${p.color}">${p.icon}</div>
+            <div>
+              <div class="pc-name">${esc(p.name)}</div>
+              <div class="pc-url">${esc(p.url || 'No URL set')}</div>
+            </div>
+          </div>
+          <div class="pc-stats">
+            <div>
+              <div class="pc-stat-label">Users</div>
+              <div class="pc-stat-value">${fmtNum(m?.total_users || 0)}</div>
+            </div>
+            <div>
+              <div class="pc-stat-label">MRR</div>
+              <div class="pc-stat-value">${fmt(m?.mrr_cents || 0)}</div>
+            </div>
+            <div>
+              <div class="pc-stat-label">Pro</div>
+              <div class="pc-stat-value">${fmtNum(m?.pro_users || 0)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderDashboardAlerts(alerts) {
+      const el = document.getElementById('dashboard-alerts');
+      if (!alerts.length) { el.innerHTML = ''; return; }
+      el.innerHTML = alerts.slice(0, 3).map(a => `
+        <div class="alert-item ${a.severity}">
+          <span class="alert-badge ${a.severity}">${a.severity}</span>
+          <div>
+            <div class="alert-text">${esc(a.title)}</div>
+            <div class="alert-product">${esc(a.product_name)} &middot; ${fmtTime(a.created_at)}</div>
+          </div>
+          <button class="alert-dismiss" onclick="resolveAlert(${a.id})" title="Dismiss">&times;</button>
+        </div>
+      `).join('');
+
+      const badge = document.getElementById('alert-count-badge');
+      if (alerts.length > 0) {
+        badge.textContent = alerts.length;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function renderProductNav(products) {
+      const nav = document.getElementById('product-nav-items');
+      nav.innerHTML = products.map(({ product: p }) => `
+        <button class="nav-item" onclick="showProductDetail('${p.slug}')">
+          <span class="nav-icon">${p.icon}</span> ${esc(p.name)}
+        </button>
+      `).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHARTS
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadCharts() {
+      try {
+        const [revData, userData] = await Promise.all([
+          api('GET', '/api/charts/revenue-trend'),
+          api('GET', '/api/charts/user-growth')
+        ]);
+
+        // Revenue chart
+        const revCtx = document.getElementById('chart-revenue');
+        if (chartInstances.revenue) chartInstances.revenue.destroy();
+
+        // Group by month
+        const months = [...new Set(revData.data.map(d => d.month))].sort();
+        const products = [...new Set(revData.data.map(d => d.slug))];
+        const datasets = products.map(slug => {
+          const productData = revData.data.filter(d => d.slug === slug);
+          return {
+            label: productData[0]?.name || slug,
+            data: months.map(m => {
+              const entry = productData.find(d => d.month === m);
+              return entry ? entry.mrr_cents / 100 : 0;
+            }),
+            borderColor: productData[0]?.color || '#6366f1',
+            backgroundColor: (productData[0]?.color || '#6366f1') + '20',
+            fill: true,
+            tension: 0.3
+          };
+        });
+
+        if (months.length > 0) {
+          chartInstances.revenue = new Chart(revCtx, {
+            type: 'line',
+            data: {
+              labels: months.map(m => new Date(m).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })),
+              datasets
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
+                x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+              }
+            }
+          });
+        }
+
+        // User growth chart
+        const userCtx = document.getElementById('chart-users');
+        if (chartInstances.users) chartInstances.users.destroy();
+
+        const dates = [...new Set(userData.data.map(d => d.date))].sort();
+        const uProducts = [...new Set(userData.data.map(d => d.slug))];
+        const uDatasets = uProducts.map(slug => {
+          const pd = userData.data.filter(d => d.slug === slug);
+          return {
+            label: pd[0]?.name || slug,
+            data: dates.map(dt => {
+              const e = pd.find(d => d.date === dt);
+              return e ? e.total_users : 0;
+            }),
+            borderColor: pd[0]?.color || '#6366f1',
+            backgroundColor: (pd[0]?.color || '#6366f1') + '20',
+            fill: true,
+            tension: 0.3
+          };
+        });
+
+        if (dates.length > 0) {
+          chartInstances.users = new Chart(userCtx, {
+            type: 'line',
+            data: {
+              labels: dates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+              datasets: uDatasets
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
+                x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      } catch(e) {
+        console.error('Charts failed:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRODUCT DETAIL
+    // ═══════════════════════════════════════════════════════════════════════
+    async function showProductDetail(slug) {
+      currentProductSlug = slug;
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-product-detail').classList.remove('hidden');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+      try {
+        const { data } = await api('GET', `/api/products/${slug}/metrics`);
+        const p = data.product;
+        const m = data.latest;
+
+        document.getElementById('detail-product-name').textContent = `${p.icon} ${p.name}`;
+        document.getElementById('detail-product-url').textContent = p.url || 'No URL configured';
+
+        const kpis = document.getElementById('detail-kpis');
+        kpis.innerHTML = `
+          <div class="kpi-card highlight">
+            <div class="kpi-label">MRR</div>
+            <div class="kpi-value">${fmt(m?.mrr_cents || 0)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Users</div>
+            <div class="kpi-value">${fmtNum(m?.total_users || 0)}</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">Pro Users</div>
+            <div class="kpi-value">${fmtNum(m?.pro_users || 0)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Trial Users</div>
+            <div class="kpi-value">${fmtNum(m?.trial_users || 0)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Active (24h)</div>
+            <div class="kpi-value">${fmtNum(m?.active_users_24h || 0)}</div>
+          </div>
+          <div class="kpi-card ${(m?.errors_24h || 0) > 0 ? 'danger' : ''}">
+            <div class="kpi-label">Errors (24h)</div>
+            <div class="kpi-value">${fmtNum(m?.errors_24h || 0)}</div>
+          </div>
+        `;
+
+        // Render trend charts
+        renderDetailCharts(data.trend, p.color);
+
+        // Load users if DB is connected
+        loadProductUsers(slug);
+      } catch(e) {
+        console.error('Product detail failed:', e);
+        toast('Failed to load product details', 'error');
+      }
+    }
+
+    function renderDetailCharts(trend, color) {
+      const labels = trend.map(t => new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+      // MRR chart
+      const mrrCtx = document.getElementById('chart-detail-mrr');
+      if (chartInstances.detailMrr) chartInstances.detailMrr.destroy();
+      if (trend.length > 0) {
+        chartInstances.detailMrr = new Chart(mrrCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'MRR',
+              data: trend.map(t => (t.mrr_cents || 0) / 100),
+              borderColor: color || '#6366f1',
+              backgroundColor: (color || '#6366f1') + '20',
+              fill: true, tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
+              x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Users chart
+      const usersCtx = document.getElementById('chart-detail-users');
+      if (chartInstances.detailUsers) chartInstances.detailUsers.destroy();
+      if (trend.length > 0) {
+        chartInstances.detailUsers = new Chart(usersCtx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Total Users',
+              data: trend.map(t => t.total_users || 0),
+              backgroundColor: (color || '#6366f1') + '40',
+              borderColor: color || '#6366f1',
+              borderWidth: 1, borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
+              x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    let userSearchTimeout;
+    function searchUsers() {
+      clearTimeout(userSearchTimeout);
+      userSearchTimeout = setTimeout(() => loadProductUsers(currentProductSlug), 300);
+    }
+
+    async function loadProductUsers(slug) {
+      try {
+        const search = document.getElementById('user-search').value.trim();
+        const { data, count } = await api('GET', `/api/products/${slug}/users?search=${encodeURIComponent(search)}&limit=50`);
+        const tbody = document.getElementById('users-tbody');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">No users found</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(u => `
+          <tr>
+            <td><strong>${esc(u.name || 'Unknown')}</strong></td>
+            <td>${esc(u.email)}</td>
+            <td><span class="badge ${u.blocked ? 'blocked' : (u.subscription_status || 'trial')}">${u.blocked ? 'Blocked' : (u.subscription_status || 'trial')}</span></td>
+            <td>${u.plan_type || '-'}</td>
+            <td>${fmtDate(u.trial_end_date)}</td>
+            <td>
+              ${u.blocked
+                ? `<button class="action-btn upgrade" onclick="userAction('${slug}',${u.id},'unblock')">Unblock</button>`
+                : `<button class="action-btn block" onclick="userAction('${slug}',${u.id},'block')">Block</button>`}
+              <button class="action-btn extend" onclick="userAction('${slug}',${u.id},'extend_trial',{days:30})">+30d</button>
+              <button class="action-btn upgrade" onclick="userAction('${slug}',${u.id},'upgrade_to_pro')">Pro</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">${e.message}</td></tr>`;
+      }
+    }
+
+    async function userAction(slug, userId, action, extra = {}) {
+      try {
+        await api('POST', `/api/products/${slug}/users/${userId}/action`, { action, ...extra });
+        toast(`Action '${action}' completed`, 'success');
+        loadProductUsers(slug);
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REVENUE PAGE
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadRevenue() {
+      try {
+        const { data } = await api('GET', '/api/revenue');
+        const kpis = document.getElementById('revenue-kpis');
+        const totalMRR = data.byProduct.reduce((sum, p) => sum + (p.mrr_cents || 0), 0);
+        const totalRevenue = data.byProduct.reduce((sum, p) => sum + parseInt(p.total_revenue_cents || 0), 0);
+        const totalPro = data.byProduct.reduce((sum, p) => sum + (p.pro_users || 0), 0);
+
+        kpis.innerHTML = `
+          <div class="kpi-card highlight">
+            <div class="kpi-label">Total MRR</div>
+            <div class="kpi-value">${fmt(totalMRR)}</div>
+            <div class="kpi-sub">ARR: ${fmt(totalMRR * 12)}</div>
+          </div>
+          <div class="kpi-card success">
+            <div class="kpi-label">All-Time Revenue</div>
+            <div class="kpi-value">${fmt(totalRevenue)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Pro Users</div>
+            <div class="kpi-value">${fmtNum(totalPro)}</div>
+          </div>
+        `;
+
+        // Revenue detail chart
+        const detailCtx = document.getElementById('chart-revenue-detail');
+        if (chartInstances.revenueDetail) chartInstances.revenueDetail.destroy();
+        const months = [...new Set(data.monthly.map(d => d.month))].sort();
+        const products = [...new Set(data.monthly.map(d => d.slug))];
+        if (months.length > 0) {
+          chartInstances.revenueDetail = new Chart(detailCtx, {
+            type: 'bar',
+            data: {
+              labels: months.map(m => new Date(m).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })),
+              datasets: products.map(slug => {
+                const pd = data.monthly.filter(d => d.slug === slug);
+                return {
+                  label: pd[0]?.name || slug,
+                  data: months.map(m => { const e = pd.find(d => d.month === m); return e ? e.mrr_cents / 100 : 0; }),
+                  backgroundColor: (pd[0]?.color || '#6366f1') + '80',
+                  borderColor: pd[0]?.color || '#6366f1',
+                  borderWidth: 1, borderRadius: 4
+                };
+              })
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } },
+              scales: {
+                x: { stacked: true, ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+                y: { stacked: true, beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } }
+              }
+            }
+          });
+        }
+
+        // Donut chart
+        const donutCtx = document.getElementById('chart-revenue-donut');
+        if (chartInstances.revenueDonut) chartInstances.revenueDonut.destroy();
+        const donutData = data.byProduct.filter(p => (p.mrr_cents || 0) > 0);
+        if (donutData.length > 0) {
+          chartInstances.revenueDonut = new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+              labels: donutData.map(p => p.name),
+              datasets: [{
+                data: donutData.map(p => p.mrr_cents / 100),
+                backgroundColor: donutData.map(p => p.color || '#6366f1'),
+                borderWidth: 2, borderColor: '#fff'
+              }]
+            },
+            options: {
+              responsive: true,
+              cutout: '65%',
+              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } }
+            }
+          });
+        }
+      } catch(e) {
+        console.error('Revenue load failed:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ALERTS PAGE
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadAlerts() {
+      try {
+        const { data } = await api('GET', '/api/alerts');
+        const el = document.getElementById('alerts-list');
+        if (!data.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No active alerts</h3><p>All systems running smoothly.</p></div>`;
+          return;
+        }
+        el.innerHTML = data.map(a => `
+          <div class="alert-item ${a.severity}">
+            <span class="alert-badge ${a.severity}">${a.severity}</span>
+            <div>
+              <div class="alert-text">${esc(a.title)}</div>
+              <div class="alert-product">${esc(a.product_name)} &middot; ${fmtTime(a.created_at)}</div>
+              ${a.message ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(a.message)}</div>` : ''}
+            </div>
+            <button class="alert-dismiss" onclick="resolveAlert(${a.id})" title="Resolve">&times;</button>
+          </div>
+        `).join('');
+      } catch(e) {
+        console.error('Alerts load failed:', e);
+      }
+    }
+
+    async function resolveAlert(id) {
+      try {
+        await api('POST', `/api/alerts/${id}/resolve`);
+        toast('Alert resolved', 'success');
+        loadAlerts();
+        loadDashboard();
+      } catch(e) { toast(e.message, 'error'); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MANAGE PRODUCTS
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadProductsManage() {
+      try {
+        const { data } = await api('GET', '/api/products');
+        const tbody = document.getElementById('products-tbody');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">No products. Click "+ Add Product" to get started.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(p => `
+          <tr>
+            <td style="font-size:22px;">${p.icon}</td>
+            <td><strong>${esc(p.name)}</strong><br><span style="font-size:11px;color:var(--text-muted);">${esc(p.url || '')}</span></td>
+            <td><code style="font-size:12px;background:#f1f5f9;padding:2px 8px;border-radius:4px;">${esc(p.slug)}</code></td>
+            <td>${p.subscription_amount ? '$' + (p.subscription_amount / 100).toFixed(0) + '/mo' : '-'}</td>
+            <td><span class="badge ${p.is_active ? 'active' : 'canceled'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td><code style="font-size:10px;color:var(--text-muted);">vhub_...${(p.api_key||'').slice(-8) || '?'}</code></td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        console.error('Products load failed:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ACTIVITY LOG
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadActivity() {
+      try {
+        const { data } = await api('GET', '/api/activity');
+        const tbody = document.getElementById('activity-tbody');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No activity yet</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(a => `
+          <tr>
+            <td style="white-space:nowrap;">${fmtTime(a.created_at)}</td>
+            <td>${esc(a.product_slug || '-')}</td>
+            <td><strong>${esc(a.action)}</strong></td>
+            <td style="font-size:11px;color:var(--text-muted);">${esc(JSON.stringify(a.details || {}))}</td>
+          </tr>
+        `).join('');
+      } catch(e) {
+        console.error('Activity load failed:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ADD PRODUCT MODAL
+    // ═══════════════════════════════════════════════════════════════════════
+    function showAddProduct() {
+      document.getElementById('add-product-modal').classList.add('active');
+    }
+    function hideAddProduct() {
+      document.getElementById('add-product-modal').classList.remove('active');
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('prod-name').value.trim();
+      const slug = document.getElementById('prod-slug').value.trim();
+      const price = parseFloat(document.getElementById('prod-price').value) || 0;
+      const url = document.getElementById('prod-url').value.trim();
+      const stripe_account_id = document.getElementById('prod-stripe').value.trim();
+      const icon = document.getElementById('prod-icon').value.trim() || '📦';
+
+      if (!name || !slug) { toast('Name and slug required', 'error'); return; }
+
+      try {
+        const { data } = await api('POST', '/api/products', {
+          name, slug, url,
+          subscription_amount: Math.round(price * 100),
+          stripe_account_id, icon
+        });
+
+        toast(`${name} registered! API key: ${data.api_key}`, 'success');
+        hideAddProduct();
+
+        // Clear form
+        ['prod-name','prod-slug','prod-price','prod-url','prod-stripe','prod-icon'].forEach(id => document.getElementById(id).value = '');
+
+        loadDashboard();
+        loadProductsManage();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    // Click outside modal to close
+    document.getElementById('add-product-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideAddProduct();
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════════════
+    function esc(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function toast(msg, type = '') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast ' + type;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+  </script>
+</body>
+</html>
