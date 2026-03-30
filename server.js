@@ -390,7 +390,12 @@ app.get('/api/dashboard', auth, async (req, res) => {
 // GET /api/products — List all products
 app.get('/api/products', auth, async (req, res) => {
   try {
-    const products = (await pool.query('SELECT id, slug, name, url, staging_url, stripe_account_id, subscription_amount, is_active, icon, color, created_at FROM products ORDER BY name')).rows;
+    const products = (await pool.query(
+      `SELECT id, slug, name, url, staging_url, stripe_account_id, subscription_amount,
+       is_active, icon, color, api_key, created_at, updated_at,
+       CASE WHEN db_connection_string IS NOT NULL AND db_connection_string != '' THEN true ELSE false END as has_db_connection
+       FROM products ORDER BY name`
+    )).rows;
     res.json({ data: products });
   } catch(e) {
     console.error('[GET /api/products]', e.message);
@@ -401,16 +406,16 @@ app.get('/api/products', auth, async (req, res) => {
 // POST /api/products — Register a new product
 app.post('/api/products', auth, async (req, res) => {
   try {
-    const { slug, name, url, staging_url, stripe_account_id, subscription_amount, icon, color } = req.body;
+    const { slug, name, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color } = req.body;
     if (!slug || !name) return res.status(400).json({ error: 'Slug and name required' });
 
     const apiKey = 'vhub_' + crypto.randomBytes(24).toString('hex');
 
     const result = await pool.query(
-      `INSERT INTO products(slug, name, url, staging_url, stripe_account_id, api_key, subscription_amount, icon, color)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      `INSERT INTO products(slug, name, url, staging_url, stripe_account_id, db_connection_string, api_key, subscription_amount, icon, color)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [slug.toLowerCase().trim(), name.trim(), url || null, staging_url || null,
-       stripe_account_id || null, apiKey, subscription_amount || 0, icon || '📦', color || '#6366f1']
+       stripe_account_id || null, db_connection_string || null, apiKey, subscription_amount || 0, icon || '📦', color || '#6366f1']
     );
 
     await logActivity(req.user.id, slug, 'product_registered', { name });
@@ -419,6 +424,98 @@ app.post('/api/products', auth, async (req, res) => {
     if (e.code === '23505') return res.status(409).json({ error: 'Product slug already exists' });
     console.error('[POST /api/products]', e.message);
     res.status(500).json({ error: 'Failed to register product' });
+  }
+});
+
+// PUT /api/products/:slug — Update product details
+app.put('/api/products/:slug', auth, async (req, res) => {
+  try {
+    const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const { name, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, is_active } = req.body;
+
+    const result = await pool.query(
+      `UPDATE products SET
+        name = COALESCE($1, name),
+        url = COALESCE($2, url),
+        staging_url = COALESCE($3, staging_url),
+        stripe_account_id = COALESCE($4, stripe_account_id),
+        db_connection_string = COALESCE($5, db_connection_string),
+        subscription_amount = COALESCE($6, subscription_amount),
+        icon = COALESCE($7, icon),
+        color = COALESCE($8, color),
+        is_active = COALESCE($9, is_active),
+        updated_at = NOW()
+      WHERE id = $10
+      RETURNING id, slug, name, url, staging_url, stripe_account_id, subscription_amount, is_active, icon, color, created_at, updated_at`,
+      [name || null, url !== undefined ? url : null, staging_url !== undefined ? staging_url : null,
+       stripe_account_id !== undefined ? stripe_account_id : null,
+       db_connection_string !== undefined ? db_connection_string : null,
+       subscription_amount !== undefined ? subscription_amount : null,
+       icon || null, color || null,
+       is_active !== undefined ? is_active : null,
+       product.id]
+    );
+
+    await logActivity(req.user.id, req.params.slug, 'product_updated', { fields: Object.keys(req.body) }, req.ip);
+    res.json({ data: result.rows[0], message: 'Product updated' });
+  } catch(e) {
+    console.error('[PUT /api/products/:slug]', e.message);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// POST /api/products/:slug/regenerate-key — Generate new API key
+app.post('/api/products/:slug/regenerate-key', auth, async (req, res) => {
+  try {
+    const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const newKey = 'vhub_' + crypto.randomBytes(24).toString('hex');
+    await pool.query('UPDATE products SET api_key = $1, updated_at = NOW() WHERE id = $2', [newKey, product.id]);
+
+    await logActivity(req.user.id, req.params.slug, 'api_key_regenerated', {}, req.ip);
+    res.json({ data: { api_key: newKey }, message: 'API key regenerated. Update your product reporter.' });
+  } catch(e) {
+    console.error('[POST /api/products/:slug/regenerate-key]', e.message);
+    res.status(500).json({ error: 'Failed to regenerate API key' });
+  }
+});
+
+// POST /api/products/:slug/toggle — Toggle product active/inactive
+app.post('/api/products/:slug/toggle', auth, async (req, res) => {
+  try {
+    const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const newState = !product.is_active;
+    await pool.query('UPDATE products SET is_active = $1, updated_at = NOW() WHERE id = $2', [newState, product.id]);
+
+    await logActivity(req.user.id, req.params.slug, newState ? 'product_activated' : 'product_deactivated', {}, req.ip);
+    res.json({ message: `${product.name} ${newState ? 'activated' : 'deactivated'}` });
+  } catch(e) {
+    console.error('[POST /api/products/:slug/toggle]', e.message);
+    res.status(500).json({ error: 'Failed to toggle product' });
+  }
+});
+
+// POST /api/products/:slug/test-db — Test product database connection
+app.post('/api/products/:slug/test-db', auth, async (req, res) => {
+  try {
+    const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    if (!product.db_connection_string) return res.status(400).json({ error: 'No database connection string configured' });
+
+    const testPool = getProductPool(product.db_connection_string);
+    const start = Date.now();
+    await testPool.query('SELECT 1');
+    const latency = Date.now() - start;
+
+    res.json({ data: { connected: true, latency_ms: latency }, message: `Connected in ${latency}ms` });
+  } catch(e) {
+    console.error('[POST /api/products/:slug/test-db]', e.message);
+    res.json({ data: { connected: false, error: e.message }, message: 'Connection failed' });
   }
 });
 

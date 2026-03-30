@@ -330,8 +330,18 @@
       background: var(--card);
       border: 2px solid var(--card-border);
       border-radius: var(--radius);
-      padding: 20px;
-      transition: all 0.15s;
+      padding: 20px 22px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: transparent;
+      transition: background 0.2s;
     }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
     .kpi-card .kpi-label {
@@ -347,16 +357,36 @@
       font-weight: 700;
       color: var(--text);
       letter-spacing: -0.02em;
+      line-height: 1.1;
     }
     .kpi-card .kpi-sub {
       font-size: 12px;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .kpi-card .kpi-icon { font-size: 24px; float: right; opacity: 0.5; }
+    .kpi-card .kpi-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .kpi-card .kpi-trend.up { color: #059669; background: #ecfdf5; }
+    .kpi-card .kpi-trend.down { color: #dc2626; background: #fef2f2; }
+    .kpi-card .kpi-trend.flat { color: #6b7280; background: #f3f4f6; }
+    .kpi-card .kpi-icon { font-size: 24px; float: right; opacity: 0.4; }
+    .kpi-card.highlight::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
     .kpi-card.highlight { border-color: var(--primary); }
+    .kpi-card.success::before { background: var(--success); }
     .kpi-card.success .kpi-value { color: var(--success); }
+    .kpi-card.warning::before { background: var(--warning); }
     .kpi-card.warning .kpi-value { color: var(--warning); }
+    .kpi-card.danger::before { background: var(--danger); }
     .kpi-card.danger .kpi-value { color: var(--danger); }
 
     /* ═══ CHART CONTAINERS ═══ */
@@ -370,15 +400,31 @@
       background: var(--card);
       border: 2px solid var(--card-border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 24px;
+      position: relative;
     }
     .chart-card h3 {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 4px;
       color: var(--text);
     }
-    .chart-card canvas { width: 100% !important; max-height: 260px; }
+    .chart-card .chart-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .chart-card canvas { width: 100% !important; max-height: 280px; }
+    .chart-card .chart-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .chart-card .chart-empty span { font-size: 32px; opacity: 0.3; margin-bottom: 8px; }
 
     /* ═══ PRODUCT CARDS ═══ */
     .product-grid {
@@ -701,7 +747,7 @@
           <div class="page-header">
             <div>
               <h1>Dashboard</h1>
-              <div class="subtitle">Overview across all Varshyl products</div>
+              <div class="subtitle">Overview across all Varshyl products <span id="last-updated" style="font-size:11px;color:var(--text-muted);margin-left:8px;"></span></div>
             </div>
             <div class="header-actions">
               <button class="btn-sm" onclick="loadDashboard()">Refresh</button>
@@ -713,12 +759,16 @@
           <div class="product-grid" id="product-grid"></div>
           <div class="chart-grid" id="chart-grid">
             <div class="chart-card">
-              <h3>Revenue Trend (MRR)</h3>
+              <h3>Revenue Trend</h3>
+              <div class="chart-subtitle">Monthly recurring revenue across all products</div>
               <canvas id="chart-revenue"></canvas>
+              <div class="chart-empty hidden" id="chart-revenue-empty"><span>📈</span>Revenue data will appear once products report metrics</div>
             </div>
             <div class="chart-card">
               <h3>User Growth</h3>
+              <div class="chart-subtitle">Total user count over the last 30 days</div>
               <canvas id="chart-users"></canvas>
+              <div class="chart-empty hidden" id="chart-users-empty"><span>👥</span>User growth data will appear once products report metrics</div>
             </div>
           </div>
         </div>
@@ -735,10 +785,12 @@
           <div class="chart-grid">
             <div class="chart-card">
               <h3>Monthly Revenue by Product</h3>
+              <div class="chart-subtitle">Stacked monthly MRR by product over 12 months</div>
               <canvas id="chart-revenue-detail"></canvas>
             </div>
             <div class="chart-card">
               <h3>Revenue Breakdown</h3>
+              <div class="chart-subtitle">Current MRR distribution by product</div>
               <canvas id="chart-revenue-donut"></canvas>
             </div>
           </div>
@@ -768,10 +820,12 @@
           <div class="chart-grid">
             <div class="chart-card">
               <h3>30-Day MRR Trend</h3>
+              <div class="chart-subtitle">Daily recurring revenue over the past month</div>
               <canvas id="chart-detail-mrr"></canvas>
             </div>
             <div class="chart-card">
               <h3>30-Day User Growth</h3>
+              <div class="chart-subtitle">Total registered users over the past month</div>
               <canvas id="chart-detail-users"></canvas>
             </div>
           </div>
@@ -833,26 +887,23 @@
           <div class="page-header">
             <div>
               <h1>Manage Products</h1>
-              <div class="subtitle">Register and configure Varshyl products</div>
+              <div class="subtitle">Register and configure Varshyl SaaS products</div>
             </div>
-            <div class="header-actions">
-              <button class="btn-sm primary" onclick="showAddProduct()">+ Add Product</button>
+            <div class="header-actions" style="display:flex;gap:8px;">
+              <button class="btn-sm" onclick="showQuickAdd()" style="background:var(--primary-bg);color:var(--primary);border-color:var(--primary);">⚡ Quick Add Known Product</button>
+              <button class="btn-sm primary" onclick="showAddProduct()">+ Add Custom Product</button>
             </div>
           </div>
-          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
-            <table class="data-table" id="products-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Product</th>
-                  <th>Slug</th>
-                  <th>Price</th>
-                  <th>Status</th>
-                  <th>API Key</th>
-                </tr>
-              </thead>
-              <tbody id="products-tbody"></tbody>
-            </table>
+
+          <!-- Product Cards Grid -->
+          <div id="products-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:24px;"></div>
+
+          <!-- Empty State -->
+          <div id="products-empty" class="hidden" style="text-align:center;padding:60px 24px;background:var(--card);border:2px dashed var(--card-border);border-radius:var(--radius);">
+            <div style="font-size:48px;opacity:0.3;margin-bottom:12px;">📦</div>
+            <h3 style="margin-bottom:8px;">No Products Registered</h3>
+            <p style="color:var(--text-secondary);margin-bottom:20px;">Add your first SaaS product to start tracking metrics.</p>
+            <button class="btn-sm primary" onclick="showQuickAdd()">⚡ Quick Add Known Product</button>
           </div>
         </div>
 
@@ -879,39 +930,70 @@
 
   <!-- ═══ ADD PRODUCT MODAL ═══ -->
   <div class="modal-overlay" id="add-product-modal">
-    <div class="modal">
-      <h2>Register New Product</h2>
+    <div class="modal" style="max-width:520px;">
+      <h2 id="product-modal-title">Register New Product</h2>
+      <input type="hidden" id="prod-edit-slug">
       <div class="form-group">
-        <label>Product Name</label>
-        <input type="text" id="prod-name" placeholder="ConstructInvoice AI">
+        <label>Product Name <span style="color:var(--danger);">*</span></label>
+        <input type="text" id="prod-name" placeholder="e.g. ConstructInvoice AI">
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Slug (unique ID)</label>
-          <input type="text" id="prod-slug" placeholder="constructinvoice">
+          <label>Slug <span style="color:var(--danger);">*</span></label>
+          <input type="text" id="prod-slug" placeholder="constructinvoice" style="font-family:monospace;">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Lowercase, no spaces. Used in URLs and API calls.</div>
         </div>
         <div class="form-group">
-          <label>Subscription ($/month)</label>
-          <input type="number" id="prod-price" placeholder="40" min="0">
+          <label>Monthly Price ($)</label>
+          <input type="number" id="prod-price" placeholder="40" min="0" step="1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Production URL</label>
+          <input type="text" id="prod-url" placeholder="https://app.varshyl.com">
+        </div>
+        <div class="form-group">
+          <label>Staging URL</label>
+          <input type="text" id="prod-staging-url" placeholder="https://staging.varshyl.com">
         </div>
       </div>
       <div class="form-group">
-        <label>Production URL</label>
-        <input type="text" id="prod-url" placeholder="https://constructinv.varshyl.com">
+        <label>Product Database Connection String</label>
+        <input type="text" id="prod-db-conn" placeholder="postgresql://readonly:pass@host:5432/dbname" style="font-family:monospace;font-size:12px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Read-only connection to query product users directly from Hub.</div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>Stripe Account ID</label>
-          <input type="text" id="prod-stripe" placeholder="acct_...">
+          <input type="text" id="prod-stripe" placeholder="acct_..." style="font-family:monospace;">
         </div>
-        <div class="form-group">
-          <label>Icon (emoji)</label>
-          <input type="text" id="prod-icon" placeholder="🏗️" maxlength="4">
+        <div class="form-group" style="display:flex;gap:12px;">
+          <div style="flex:1;">
+            <label>Icon</label>
+            <input type="text" id="prod-icon" placeholder="🏗️" maxlength="4" style="text-align:center;font-size:20px;">
+          </div>
+          <div style="flex:1;">
+            <label>Color</label>
+            <input type="color" id="prod-color" value="#6366f1" style="height:38px;padding:2px;cursor:pointer;">
+          </div>
         </div>
       </div>
       <div class="modal-actions">
         <button class="btn-sm" onclick="hideAddProduct()">Cancel</button>
-        <button class="btn-sm primary" onclick="addProduct()">Register Product</button>
+        <button class="btn-sm primary" id="product-modal-submit" onclick="addProduct()">Register Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ QUICK ADD MODAL (Known Products) ═══ -->
+  <div class="modal-overlay" id="quick-add-modal">
+    <div class="modal" style="max-width:480px;">
+      <h2>⚡ Quick Add Known Product</h2>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;">Select a Varshyl product to auto-fill its details. You can edit everything after adding.</p>
+      <div id="known-products-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div class="modal-actions" style="margin-top:20px;">
+        <button class="btn-sm" onclick="hideQuickAdd()">Cancel</button>
       </div>
     </div>
   </div>
@@ -970,6 +1052,27 @@
     let dashboardData = null;
     let currentProductSlug = null;
     let chartInstances = {};
+
+    // Chart.js global defaults for professional look
+    if (typeof Chart !== 'undefined') {
+      Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+      Chart.defaults.font.size = 11;
+      Chart.defaults.color = '#888';
+      Chart.defaults.plugins.tooltip.backgroundColor = '#1a1a2e';
+      Chart.defaults.plugins.tooltip.titleFont = { family: "'Inter'", size: 12, weight: '600' };
+      Chart.defaults.plugins.tooltip.bodyFont = { family: "'Inter'", size: 11 };
+      Chart.defaults.plugins.tooltip.cornerRadius = 8;
+      Chart.defaults.plugins.tooltip.padding = { top: 8, bottom: 8, left: 12, right: 12 };
+      Chart.defaults.plugins.tooltip.displayColors = true;
+      Chart.defaults.plugins.tooltip.boxPadding = 4;
+      Chart.defaults.elements.line.borderWidth = 2.5;
+      Chart.defaults.elements.point.radius = 0;
+      Chart.defaults.elements.point.hoverRadius = 5;
+      Chart.defaults.elements.point.hoverBorderWidth = 2;
+      Chart.defaults.elements.bar.borderRadius = 6;
+      Chart.defaults.animation.duration = 800;
+      Chart.defaults.animation.easing = 'easeOutQuart';
+    }
 
     const API = '';
     const fmt = n => '$' + (n / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -1148,6 +1251,9 @@
 
     function renderKPIs(k) {
       const grid = document.getElementById('kpi-grid');
+      const convRate = k.total_users > 0 ? ((k.pro_users / k.total_users) * 100).toFixed(1) : '0.0';
+      const churnRate = k.total_users > 0 ? ((k.churned_users / k.total_users) * 100).toFixed(1) : '0.0';
+
       grid.innerHTML = `
         <div class="kpi-card highlight">
           <div class="kpi-icon">💰</div>
@@ -1159,26 +1265,45 @@
           <div class="kpi-icon">👥</div>
           <div class="kpi-label">Total Users</div>
           <div class="kpi-value">${fmtNum(k.total_users)}</div>
-          <div class="kpi-sub">${fmtNum(k.active_users_24h)} active today</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend ${k.signups_24h > 0 ? 'up' : 'flat'}">${k.signups_24h > 0 ? '↑' : '→'} ${fmtNum(k.signups_24h)} today</span>
+            <span style="color:var(--text-muted);">·</span>
+            ${fmtNum(k.active_users_24h)} active
+          </div>
         </div>
         <div class="kpi-card success">
           <div class="kpi-icon">⭐</div>
           <div class="kpi-label">Pro Subscribers</div>
           <div class="kpi-value">${fmtNum(k.pro_users)}</div>
-          <div class="kpi-sub">${fmtNum(k.trial_users)} on trial</div>
+          <div class="kpi-sub">
+            <span class="kpi-trend up">${convRate}% conversion</span>
+            <span style="color:var(--text-muted);">·</span>
+            ${fmtNum(k.trial_users)} on trial
+          </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon">📦</div>
           <div class="kpi-label">Products</div>
           <div class="kpi-value">${k.product_count}</div>
-          <div class="kpi-sub">${fmtNum(k.signups_24h)} signups today</div>
+          <div class="kpi-sub">${fmtNum(k.free_override_users)} free overrides</div>
         </div>
+        ${k.churned_users > 0 ? `<div class="kpi-card warning">
+          <div class="kpi-icon">📉</div>
+          <div class="kpi-label">Churned Users</div>
+          <div class="kpi-value">${fmtNum(k.churned_users)}</div>
+          <div class="kpi-sub"><span class="kpi-trend down">${churnRate}% churn rate</span></div>
+        </div>` : ''}
         ${k.errors_24h > 0 ? `<div class="kpi-card danger">
           <div class="kpi-icon">⚠️</div>
           <div class="kpi-label">Errors (24h)</div>
           <div class="kpi-value">${fmtNum(k.errors_24h)}</div>
+          <div class="kpi-sub"><span class="kpi-trend down">Needs attention</span></div>
         </div>` : ''}
       `;
+
+      // Update last-updated timestamp
+      const updatedEl = document.getElementById('last-updated');
+      if (updatedEl) updatedEl.textContent = '· Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     }
 
     function renderProductCards(products) {
@@ -1261,29 +1386,43 @@
         ]);
 
         // Revenue chart
-        const revCtx = document.getElementById('chart-revenue');
+        const revCanvas = document.getElementById('chart-revenue');
+        const revEmpty = document.getElementById('chart-revenue-empty');
         if (chartInstances.revenue) chartInstances.revenue.destroy();
 
-        // Group by month
         const months = [...new Set(revData.data.map(d => d.month))].sort();
         const products = [...new Set(revData.data.map(d => d.slug))];
-        const datasets = products.map(slug => {
-          const productData = revData.data.filter(d => d.slug === slug);
-          return {
-            label: productData[0]?.name || slug,
-            data: months.map(m => {
-              const entry = productData.find(d => d.month === m);
-              return entry ? entry.mrr_cents / 100 : 0;
-            }),
-            borderColor: productData[0]?.color || '#6366f1',
-            backgroundColor: (productData[0]?.color || '#6366f1') + '20',
-            fill: true,
-            tension: 0.3
-          };
-        });
 
         if (months.length > 0) {
-          chartInstances.revenue = new Chart(revCtx, {
+          revCanvas.style.display = '';
+          if (revEmpty) revEmpty.classList.add('hidden');
+
+          const datasets = products.map(slug => {
+            const productData = revData.data.filter(d => d.slug === slug);
+            const baseColor = productData[0]?.color || '#6366f1';
+            return {
+              label: productData[0]?.name || slug,
+              data: months.map(m => {
+                const entry = productData.find(d => d.month === m);
+                return entry ? entry.mrr_cents / 100 : 0;
+              }),
+              borderColor: baseColor,
+              backgroundColor: function(context) {
+                const ctx = context.chart.ctx;
+                const gradient = ctx.createLinearGradient(0, 0, 0, context.chart.height);
+                gradient.addColorStop(0, baseColor + '40');
+                gradient.addColorStop(1, baseColor + '05');
+                return gradient;
+              },
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: baseColor,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            };
+          });
+
+          chartInstances.revenue = new Chart(revCanvas, {
             type: 'line',
             data: {
               labels: months.map(m => new Date(m).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })),
@@ -1291,38 +1430,60 @@
             },
             options: {
               responsive: true,
-              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } },
+              interaction: { intersect: false, mode: 'index' },
+              plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { family: "'Inter'", size: 11 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}` } }
+              },
               scales: {
-                y: { beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
-                x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+                y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
               }
             }
           });
+        } else {
+          revCanvas.style.display = 'none';
+          if (revEmpty) revEmpty.classList.remove('hidden');
         }
 
         // User growth chart
-        const userCtx = document.getElementById('chart-users');
+        const userCanvas = document.getElementById('chart-users');
+        const userEmpty = document.getElementById('chart-users-empty');
         if (chartInstances.users) chartInstances.users.destroy();
 
         const dates = [...new Set(userData.data.map(d => d.date))].sort();
         const uProducts = [...new Set(userData.data.map(d => d.slug))];
-        const uDatasets = uProducts.map(slug => {
-          const pd = userData.data.filter(d => d.slug === slug);
-          return {
-            label: pd[0]?.name || slug,
-            data: dates.map(dt => {
-              const e = pd.find(d => d.date === dt);
-              return e ? e.total_users : 0;
-            }),
-            borderColor: pd[0]?.color || '#6366f1',
-            backgroundColor: (pd[0]?.color || '#6366f1') + '20',
-            fill: true,
-            tension: 0.3
-          };
-        });
 
         if (dates.length > 0) {
-          chartInstances.users = new Chart(userCtx, {
+          userCanvas.style.display = '';
+          if (userEmpty) userEmpty.classList.add('hidden');
+
+          const uDatasets = uProducts.map(slug => {
+            const pd = userData.data.filter(d => d.slug === slug);
+            const baseColor = pd[0]?.color || '#6366f1';
+            return {
+              label: pd[0]?.name || slug,
+              data: dates.map(dt => {
+                const e = pd.find(d => d.date === dt);
+                return e ? e.total_users : 0;
+              }),
+              borderColor: baseColor,
+              backgroundColor: function(context) {
+                const ctx = context.chart.ctx;
+                const gradient = ctx.createLinearGradient(0, 0, 0, context.chart.height);
+                gradient.addColorStop(0, baseColor + '40');
+                gradient.addColorStop(1, baseColor + '05');
+                return gradient;
+              },
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: baseColor,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            };
+          });
+
+          chartInstances.users = new Chart(userCanvas, {
             type: 'line',
             data: {
               labels: dates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
@@ -1330,13 +1491,20 @@
             },
             options: {
               responsive: true,
-              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } },
+              interaction: { intersect: false, mode: 'index' },
+              plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { family: "'Inter'", size: 11 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} users` } }
+              },
               scales: {
-                y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
-                x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+                y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
               }
             }
           });
+        } else {
+          userCanvas.style.display = 'none';
+          if (userEmpty) userEmpty.classList.remove('hidden');
         }
       } catch(e) {
         console.error('Charts failed:', e);
@@ -1401,6 +1569,7 @@
 
     function renderDetailCharts(trend, color) {
       const labels = trend.map(t => new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const baseColor = color || '#6366f1';
 
       // MRR chart
       const mrrCtx = document.getElementById('chart-detail-mrr');
@@ -1413,17 +1582,30 @@
             datasets: [{
               label: 'MRR',
               data: trend.map(t => (t.mrr_cents || 0) / 100),
-              borderColor: color || '#6366f1',
-              backgroundColor: (color || '#6366f1') + '20',
-              fill: true, tension: 0.3
+              borderColor: baseColor,
+              backgroundColor: function(context) {
+                const ctx = context.chart.ctx;
+                const gradient = ctx.createLinearGradient(0, 0, 0, context.chart.height);
+                gradient.addColorStop(0, baseColor + '40');
+                gradient.addColorStop(1, baseColor + '05');
+                return gradient;
+              },
+              fill: true, tension: 0.4,
+              pointBackgroundColor: baseColor,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
             }]
           },
           options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `MRR: $${ctx.parsed.y.toLocaleString()}` } }
+            },
             scales: {
-              y: { beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
-              x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+              y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
+              x: { grid: { display: false }, border: { display: false } }
             }
           }
         });
@@ -1440,17 +1622,22 @@
             datasets: [{
               label: 'Total Users',
               data: trend.map(t => t.total_users || 0),
-              backgroundColor: (color || '#6366f1') + '40',
-              borderColor: color || '#6366f1',
-              borderWidth: 1, borderRadius: 4
+              backgroundColor: baseColor + '35',
+              borderColor: baseColor,
+              borderWidth: 2, borderRadius: 6,
+              hoverBackgroundColor: baseColor + '60'
             }]
           },
           options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `Users: ${ctx.parsed.y.toLocaleString()}` } }
+            },
             scales: {
-              y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } },
-              x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+              y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
+              x: { grid: { display: false }, border: { display: false } }
             }
           }
         });
@@ -1739,28 +1926,333 @@
     // ═══════════════════════════════════════════════════════════════════════
     // MANAGE PRODUCTS
     // ═══════════════════════════════════════════════════════════════════════
+
+    // Known Varshyl products — presets for quick registration
+    const KNOWN_PRODUCTS = [
+      {
+        name: 'ConstructInvoice AI',
+        slug: 'constructinvoice',
+        icon: '🏗️',
+        color: '#f59e0b',
+        url: 'https://constructinv.varshyl.com',
+        staging_url: '',
+        price: 40,
+        description: 'AI-powered invoicing for construction contractors'
+      },
+      {
+        name: 'DocPix Studio',
+        slug: 'docpix-studio',
+        icon: '📄',
+        color: '#6366f1',
+        url: 'https://vagishkapila.github.io/openpdf-studio',
+        staging_url: 'https://lotuspuffs.com',
+        price: 0,
+        description: 'Free open-source PDF & document editor'
+      },
+      {
+        name: 'Varshyl CRM',
+        slug: 'varshyl-crm',
+        icon: '🤝',
+        color: '#0ea5e9',
+        url: '',
+        staging_url: '',
+        price: 0,
+        description: 'Customer relationship management (coming soon)'
+      },
+      {
+        name: 'Varshyl Analytics',
+        slug: 'varshyl-analytics',
+        icon: '📊',
+        color: '#10b981',
+        url: '',
+        staging_url: '',
+        price: 0,
+        description: 'Business intelligence & analytics dashboard (coming soon)'
+      }
+    ];
+
     async function loadProductsManage() {
       try {
         const { data } = await api('GET', '/api/products');
-        const tbody = document.getElementById('products-tbody');
+        const grid = document.getElementById('products-grid');
+        const empty = document.getElementById('products-empty');
+
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">No products. Click "+ Add Product" to get started.</td></tr>';
+          grid.innerHTML = '';
+          empty.classList.remove('hidden');
           return;
         }
-        tbody.innerHTML = data.map(p => `
-          <tr>
-            <td style="font-size:22px;">${p.icon}</td>
-            <td><strong>${esc(p.name)}</strong><br><span style="font-size:11px;color:var(--text-muted);">${esc(p.url || '')}</span></td>
-            <td><code style="font-size:12px;background:#f1f5f9;padding:2px 8px;border-radius:4px;">${esc(p.slug)}</code></td>
-            <td>${p.subscription_amount ? '$' + (p.subscription_amount / 100).toFixed(0) + '/mo' : '-'}</td>
-            <td><span class="badge ${p.is_active ? 'active' : 'canceled'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
-            <td><code style="font-size:10px;color:var(--text-muted);">vhub_...${(p.api_key||'').slice(-8) || '?'}</code></td>
-          </tr>
+
+        empty.classList.add('hidden');
+        grid.innerHTML = data.map(p => `
+          <div class="product-card" style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);padding:20px;position:relative;transition:all 0.2s;cursor:default;">
+            <div style="position:absolute;top:12px;right:12px;display:flex;gap:6px;">
+              <span class="badge ${p.is_active ? 'active' : 'canceled'}" style="font-size:10px;">${p.is_active ? 'Active' : 'Inactive'}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:${p.color}15;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid ${p.color}30;">${p.icon}</div>
+              <div>
+                <h3 style="margin:0;font-size:16px;">${esc(p.name)}</h3>
+                <code style="font-size:11px;color:var(--text-muted);background:#f1f5f9;padding:1px 6px;border-radius:4px;">${esc(p.slug)}</code>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:16px;">
+              <div>
+                <span style="color:var(--text-muted);">Price</span><br>
+                <strong>${p.subscription_amount ? '$' + (p.subscription_amount / 100).toFixed(0) + '/mo' : 'Free'}</strong>
+              </div>
+              <div>
+                <span style="color:var(--text-muted);">DB Connected</span><br>
+                <strong style="color:${p.has_db_connection ? 'var(--success)' : 'var(--text-muted)'};">${p.has_db_connection ? '● Yes' : '○ No'}</strong>
+              </div>
+              <div>
+                <span style="color:var(--text-muted);">Production</span><br>
+                ${p.url ? '<a href="' + esc(p.url) + '" target="_blank" style="color:var(--primary);font-size:11px;">Visit →</a>' : '<span style="color:var(--text-muted);">Not set</span>'}
+              </div>
+              <div>
+                <span style="color:var(--text-muted);">Staging</span><br>
+                ${p.staging_url ? '<a href="' + esc(p.staging_url) + '" target="_blank" style="color:var(--primary);font-size:11px;">Visit →</a>' : '<span style="color:var(--text-muted);">Not set</span>'}
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:10px;background:var(--background);border-radius:8px;margin-bottom:12px;">
+              <code style="font-size:11px;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;">API: vhub_...${(p.api_key||'').slice(-12)}</code>
+              <button class="btn-xs" onclick="copyApiKey('${esc(p.api_key)}')">Copy</button>
+              <button class="btn-xs danger" onclick="regenerateKey('${esc(p.slug)}', '${esc(p.name)}')">Regen</button>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-xs" onclick="editProduct('${esc(p.slug)}')" style="flex:1;">✏️ Edit</button>
+              <button class="btn-xs" onclick="toggleProduct('${esc(p.slug)}')" style="flex:1;">${p.is_active ? '⏸️ Deactivate' : '▶️ Activate'}</button>
+              <button class="btn-xs" onclick="testProductDb('${esc(p.slug)}')" style="flex:1;" ${!p.has_db_connection ? 'disabled style="flex:1;opacity:0.4;cursor:not-allowed;"' : ''}>🔌 Test DB</button>
+            </div>
+          </div>
         `).join('');
       } catch(e) {
         console.error('Products load failed:', e);
       }
     }
+
+    function copyApiKey(key) {
+      navigator.clipboard.writeText(key).then(() => toast('API key copied!', 'success')).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = key;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('API key copied!', 'success');
+      });
+    }
+
+    async function regenerateKey(slug, name) {
+      if (!confirm(`Regenerate API key for ${name}? The old key will stop working immediately. You'll need to update the reporter module.`)) return;
+      try {
+        const { data, message } = await api('POST', `/api/products/${slug}/regenerate-key`);
+        toast(message || 'API key regenerated', 'success');
+        loadProductsManage();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    async function toggleProduct(slug) {
+      try {
+        const { message } = await api('POST', `/api/products/${slug}/toggle`);
+        toast(message, 'success');
+        loadProductsManage();
+        loadDashboard();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    async function testProductDb(slug) {
+      toast('Testing connection...', 'success');
+      try {
+        const { data, message } = await api('POST', `/api/products/${slug}/test-db`);
+        if (data.connected) {
+          toast(`✅ ${message}`, 'success');
+        } else {
+          toast(`❌ Connection failed: ${data.error}`, 'error');
+        }
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    async function editProduct(slug) {
+      try {
+        const { data: products } = await api('GET', '/api/products');
+        const p = products.find(pr => pr.slug === slug);
+        if (!p) { toast('Product not found', 'error'); return; }
+
+        document.getElementById('product-modal-title').textContent = `Edit: ${p.name}`;
+        document.getElementById('product-modal-submit').textContent = 'Save Changes';
+        document.getElementById('product-modal-submit').setAttribute('onclick', 'saveProductEdit()');
+        document.getElementById('prod-edit-slug').value = slug;
+        document.getElementById('prod-name').value = p.name || '';
+        document.getElementById('prod-slug').value = p.slug || '';
+        document.getElementById('prod-slug').disabled = true; // Can't change slug
+        document.getElementById('prod-price').value = p.subscription_amount ? (p.subscription_amount / 100) : '';
+        document.getElementById('prod-url').value = p.url || '';
+        document.getElementById('prod-staging-url').value = p.staging_url || '';
+        document.getElementById('prod-stripe').value = p.stripe_account_id || '';
+        document.getElementById('prod-icon').value = p.icon || '';
+        document.getElementById('prod-color').value = p.color || '#6366f1';
+        document.getElementById('prod-db-conn').value = ''; // Never show actual connection string
+        document.getElementById('prod-db-conn').placeholder = p.has_db_connection ? '(configured — enter new value to change)' : 'postgresql://readonly:pass@host:5432/dbname';
+
+        document.getElementById('add-product-modal').classList.add('active');
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    async function saveProductEdit() {
+      const slug = document.getElementById('prod-edit-slug').value;
+      const name = document.getElementById('prod-name').value.trim();
+      const price = parseFloat(document.getElementById('prod-price').value);
+      const url = document.getElementById('prod-url').value.trim();
+      const staging_url = document.getElementById('prod-staging-url').value.trim();
+      const stripe_account_id = document.getElementById('prod-stripe').value.trim();
+      const icon = document.getElementById('prod-icon').value.trim();
+      const color = document.getElementById('prod-color').value;
+      const db_connection_string = document.getElementById('prod-db-conn').value.trim();
+
+      if (!name) { toast('Product name is required', 'error'); return; }
+
+      const body = { name, url, staging_url, stripe_account_id, icon, color };
+      if (!isNaN(price)) body.subscription_amount = Math.round(price * 100);
+      if (db_connection_string) body.db_connection_string = db_connection_string;
+
+      try {
+        await api('PUT', `/api/products/${slug}`, body);
+        toast('Product updated', 'success');
+        hideAddProduct();
+        loadProductsManage();
+        loadDashboard();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ADD / EDIT PRODUCT MODAL
+    // ═══════════════════════════════════════════════════════════════════════
+    function showAddProduct() {
+      // Reset to "add" mode
+      document.getElementById('product-modal-title').textContent = 'Register New Product';
+      document.getElementById('product-modal-submit').textContent = 'Register Product';
+      document.getElementById('product-modal-submit').setAttribute('onclick', 'addProduct()');
+      document.getElementById('prod-edit-slug').value = '';
+      document.getElementById('prod-slug').disabled = false;
+      document.getElementById('prod-db-conn').placeholder = 'postgresql://readonly:pass@host:5432/dbname';
+      ['prod-name','prod-slug','prod-price','prod-url','prod-staging-url','prod-stripe','prod-icon','prod-db-conn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('prod-color').value = '#6366f1';
+      document.getElementById('add-product-modal').classList.add('active');
+    }
+
+    function hideAddProduct() {
+      document.getElementById('add-product-modal').classList.remove('active');
+      document.getElementById('prod-slug').disabled = false;
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('prod-name').value.trim();
+      const slug = document.getElementById('prod-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      const price = parseFloat(document.getElementById('prod-price').value) || 0;
+      const url = document.getElementById('prod-url').value.trim();
+      const staging_url = document.getElementById('prod-staging-url').value.trim();
+      const stripe_account_id = document.getElementById('prod-stripe').value.trim();
+      const icon = document.getElementById('prod-icon').value.trim() || '📦';
+      const color = document.getElementById('prod-color').value || '#6366f1';
+      const db_connection_string = document.getElementById('prod-db-conn').value.trim();
+
+      if (!name || !slug) { toast('Name and slug are required', 'error'); return; }
+
+      try {
+        const body = {
+          name, slug, url, staging_url,
+          subscription_amount: Math.round(price * 100),
+          stripe_account_id, icon, color
+        };
+        if (db_connection_string) body.db_connection_string = db_connection_string;
+
+        const { data } = await api('POST', '/api/products', body);
+
+        toast(`${name} registered! API key copied to clipboard.`, 'success');
+        navigator.clipboard.writeText(data.api_key).catch(() => {});
+        hideAddProduct();
+        loadDashboard();
+        loadProductsManage();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // QUICK ADD (KNOWN PRODUCTS)
+    // ═══════════════════════════════════════════════════════════════════════
+    function showQuickAdd() {
+      // Check which products are already registered
+      api('GET', '/api/products').then(({ data: existing }) => {
+        const existingSlugs = existing.map(p => p.slug);
+        const list = document.getElementById('known-products-list');
+        list.innerHTML = KNOWN_PRODUCTS.map(kp => {
+          const alreadyAdded = existingSlugs.includes(kp.slug);
+          return `
+            <div style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid ${alreadyAdded ? '#e8e8f0' : kp.color + '40'};border-radius:12px;background:${alreadyAdded ? 'var(--background)' : kp.color + '08'};${alreadyAdded ? 'opacity:0.6;' : 'cursor:pointer;'}" ${alreadyAdded ? '' : `onclick="quickAddProduct(${KNOWN_PRODUCTS.indexOf(kp)})"`}>
+              <div style="width:40px;height:40px;border-radius:10px;background:${kp.color}15;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid ${kp.color}30;">${kp.icon}</div>
+              <div style="flex:1;">
+                <strong style="font-size:14px;">${kp.name}</strong>
+                <div style="font-size:12px;color:var(--text-secondary);">${kp.description}</div>
+              </div>
+              ${alreadyAdded ? '<span style="font-size:11px;color:var(--success);font-weight:600;">✓ Added</span>' : '<span style="font-size:11px;color:var(--primary);font-weight:600;">+ Add</span>'}
+            </div>
+          `;
+        }).join('');
+        document.getElementById('quick-add-modal').classList.add('active');
+      }).catch(e => toast(e.message, 'error'));
+    }
+
+    function hideQuickAdd() {
+      document.getElementById('quick-add-modal').classList.remove('active');
+    }
+
+    function quickAddProduct(index) {
+      const kp = KNOWN_PRODUCTS[index];
+      hideQuickAdd();
+
+      // Pre-fill the add product modal
+      document.getElementById('product-modal-title').textContent = 'Register New Product';
+      document.getElementById('product-modal-submit').textContent = 'Register Product';
+      document.getElementById('product-modal-submit').setAttribute('onclick', 'addProduct()');
+      document.getElementById('prod-edit-slug').value = '';
+      document.getElementById('prod-slug').disabled = false;
+
+      document.getElementById('prod-name').value = kp.name;
+      document.getElementById('prod-slug').value = kp.slug;
+      document.getElementById('prod-price').value = kp.price || '';
+      document.getElementById('prod-url').value = kp.url || '';
+      document.getElementById('prod-staging-url').value = kp.staging_url || '';
+      document.getElementById('prod-icon').value = kp.icon;
+      document.getElementById('prod-color').value = kp.color;
+      document.getElementById('prod-stripe').value = '';
+      document.getElementById('prod-db-conn').value = '';
+
+      document.getElementById('add-product-modal').classList.add('active');
+    }
+
+    // Click outside modal to close
+    document.getElementById('add-product-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideAddProduct();
+    });
+    document.getElementById('quick-add-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideQuickAdd();
+    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // ACTIVITY LOG
@@ -1785,51 +2277,6 @@
         console.error('Activity load failed:', e);
       }
     }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // ADD PRODUCT MODAL
-    // ═══════════════════════════════════════════════════════════════════════
-    function showAddProduct() {
-      document.getElementById('add-product-modal').classList.add('active');
-    }
-    function hideAddProduct() {
-      document.getElementById('add-product-modal').classList.remove('active');
-    }
-
-    async function addProduct() {
-      const name = document.getElementById('prod-name').value.trim();
-      const slug = document.getElementById('prod-slug').value.trim();
-      const price = parseFloat(document.getElementById('prod-price').value) || 0;
-      const url = document.getElementById('prod-url').value.trim();
-      const stripe_account_id = document.getElementById('prod-stripe').value.trim();
-      const icon = document.getElementById('prod-icon').value.trim() || '📦';
-
-      if (!name || !slug) { toast('Name and slug required', 'error'); return; }
-
-      try {
-        const { data } = await api('POST', '/api/products', {
-          name, slug, url,
-          subscription_amount: Math.round(price * 100),
-          stripe_account_id, icon
-        });
-
-        toast(`${name} registered! API key: ${data.api_key}`, 'success');
-        hideAddProduct();
-
-        // Clear form
-        ['prod-name','prod-slug','prod-price','prod-url','prod-stripe','prod-icon'].forEach(id => document.getElementById(id).value = '');
-
-        loadDashboard();
-        loadProductsManage();
-      } catch(e) {
-        toast(e.message, 'error');
-      }
-    }
-
-    // Click outside modal to close
-    document.getElementById('add-product-modal').addEventListener('click', e => {
-      if (e.target === e.currentTarget) hideAddProduct();
-    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // UTILITIES
