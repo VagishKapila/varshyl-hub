@@ -302,6 +302,23 @@
     }
     .btn-sm.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.25); }
 
+    .btn-xs {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-xs:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .btn-xs.danger { border-color: #fca5a5; color: var(--danger); }
+    .btn-xs.danger:hover { background: var(--danger-bg); border-color: var(--danger); }
+
     /* ═══ KPI CARDS ═══ */
     .kpi-grid {
       display: grid;
@@ -655,6 +672,9 @@
           <div id="product-nav-items"></div>
           <div class="nav-divider"></div>
           <div class="nav-section">Settings</div>
+          <button class="nav-item" data-page="admins">
+            <span class="nav-icon">🛡️</span> Manage Admins
+          </button>
           <button class="nav-item" data-page="products-manage">
             <span class="nav-icon">⚙️</span> Manage Products
           </button>
@@ -778,6 +798,36 @@
           </div>
         </div>
 
+        <!-- MANAGE ADMINS PAGE -->
+        <div id="page-admins" class="page hidden">
+          <div class="page-header">
+            <div>
+              <h1>Manage Admins</h1>
+              <div class="subtitle">Hub admin accounts across all Varshyl products</div>
+            </div>
+            <div class="header-actions">
+              <button class="btn-sm primary" onclick="showAddAdmin()">+ Add Admin</button>
+            </div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
+            <table class="data-table" id="admins-table">
+              <thead>
+                <tr>
+                  <th>Admin</th>
+                  <th>Email</th>
+                  <th>Last Login</th>
+                  <th>Created</th>
+                  <th style="width:180px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admins-tbody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px;padding:14px 18px;background:var(--primary-bg);border-radius:var(--radius);font-size:13px;color:var(--text-secondary);">
+            <strong>Note:</strong> Admins created here can log in to the Varshyl Hub and manage all products. They have full super-admin access. Password resets and deletion are irreversible.
+          </div>
+        </div>
+
         <!-- MANAGE PRODUCTS PAGE -->
         <div id="page-products-manage" class="page hidden">
           <div class="page-header">
@@ -862,6 +912,48 @@
       <div class="modal-actions">
         <button class="btn-sm" onclick="hideAddProduct()">Cancel</button>
         <button class="btn-sm primary" onclick="addProduct()">Register Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ADD ADMIN MODAL ═══ -->
+  <div class="modal-overlay" id="add-admin-modal">
+    <div class="modal">
+      <h2>Add New Admin</h2>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">This person will have full super-admin access to the Varshyl Hub and all products.</p>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="admin-name" placeholder="Jane Smith">
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="admin-email" placeholder="jane@varshyl.com">
+      </div>
+      <div class="form-group">
+        <label>Temporary Password</label>
+        <input type="text" id="admin-password" placeholder="Min 8 characters">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Share this with the admin securely. They can change it after first login.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-sm" onclick="hideAddAdmin()">Cancel</button>
+        <button class="btn-sm primary" onclick="createAdmin()">Create Admin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RESET PASSWORD MODAL ═══ -->
+  <div class="modal-overlay" id="reset-pw-modal">
+    <div class="modal">
+      <h2>Reset Password</h2>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;" id="reset-pw-info">Set a new password for this admin.</p>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="text" id="reset-pw-value" placeholder="Min 8 characters">
+      </div>
+      <input type="hidden" id="reset-pw-admin-id">
+      <div class="modal-actions">
+        <button class="btn-sm" onclick="hideResetPw()">Cancel</button>
+        <button class="btn-sm primary" onclick="resetAdminPassword()">Reset Password</button>
       </div>
     </div>
   </div>
@@ -1031,6 +1123,7 @@
       if (page === 'dashboard') loadDashboard();
       else if (page === 'revenue') loadRevenue();
       else if (page === 'alerts') loadAlerts();
+      else if (page === 'admins') loadAdmins();
       else if (page === 'products-manage') loadProductsManage();
       else if (page === 'activity') loadActivity();
     }
@@ -1532,6 +1625,116 @@
         loadDashboard();
       } catch(e) { toast(e.message, 'error'); }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MANAGE ADMINS
+    // ═══════════════════════════════════════════════════════════════════════
+    async function loadAdmins() {
+      try {
+        const { data } = await api('GET', '/api/admins');
+        const tbody = document.getElementById('admins-tbody');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">No admins found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(a => {
+          const isMe = currentUser && a.id === currentUser.id;
+          return `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${(a.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}</div>
+                <div>
+                  <strong>${esc(a.name)}</strong>${isMe ? ' <span style="font-size:10px;background:var(--primary-bg);color:var(--primary);padding:1px 6px;border-radius:6px;font-weight:600;">You</span>' : ''}
+                </div>
+              </div>
+            </td>
+            <td><code style="font-size:12px;background:#f1f5f9;padding:2px 8px;border-radius:4px;">${esc(a.email)}</code></td>
+            <td>${a.last_login ? fmtTime(a.last_login) : '<span style="color:var(--text-muted);">Never</span>'}</td>
+            <td>${fmtDate(a.created_at)}</td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn-xs" onclick="showResetPw(${a.id}, '${esc(a.name)}')" title="Reset Password">🔑 Reset PW</button>
+                ${isMe ? '' : `<button class="btn-xs danger" onclick="deleteAdmin(${a.id}, '${esc(a.name)}')" title="Remove Admin">🗑️ Remove</button>`}
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch(e) {
+        console.error('Admins load failed:', e);
+        toast('Failed to load admins', 'error');
+      }
+    }
+
+    function showAddAdmin() {
+      document.getElementById('add-admin-modal').classList.add('active');
+      document.getElementById('admin-name').focus();
+    }
+    function hideAddAdmin() {
+      document.getElementById('add-admin-modal').classList.remove('active');
+    }
+
+    async function createAdmin() {
+      const name = document.getElementById('admin-name').value.trim();
+      const email = document.getElementById('admin-email').value.trim();
+      const password = document.getElementById('admin-password').value;
+
+      if (!name || !email || !password) { toast('All fields are required', 'error'); return; }
+      if (password.length < 8) { toast('Password must be at least 8 characters', 'error'); return; }
+
+      try {
+        await api('POST', '/api/admins', { name, email, password });
+        toast(`Admin ${name} created successfully`, 'success');
+        hideAddAdmin();
+        ['admin-name','admin-email','admin-password'].forEach(id => document.getElementById(id).value = '');
+        loadAdmins();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    async function deleteAdmin(id, name) {
+      if (!confirm(`Are you sure you want to remove admin "${name}"? This is irreversible.`)) return;
+      try {
+        await api('DELETE', '/api/admins/' + id);
+        toast(`Admin ${name} removed`, 'success');
+        loadAdmins();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    function showResetPw(id, name) {
+      document.getElementById('reset-pw-admin-id').value = id;
+      document.getElementById('reset-pw-info').textContent = `Set a new password for ${name}.`;
+      document.getElementById('reset-pw-value').value = '';
+      document.getElementById('reset-pw-modal').classList.add('active');
+      document.getElementById('reset-pw-value').focus();
+    }
+    function hideResetPw() {
+      document.getElementById('reset-pw-modal').classList.remove('active');
+    }
+
+    async function resetAdminPassword() {
+      const id = document.getElementById('reset-pw-admin-id').value;
+      const password = document.getElementById('reset-pw-value').value;
+      if (!password || password.length < 8) { toast('Password must be at least 8 characters', 'error'); return; }
+      try {
+        await api('POST', `/api/admins/${id}/reset-password`, { password });
+        toast('Password reset successfully', 'success');
+        hideResetPw();
+      } catch(e) {
+        toast(e.message, 'error');
+      }
+    }
+
+    // Click outside modals to close
+    document.getElementById('add-admin-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideAddAdmin();
+    });
+    document.getElementById('reset-pw-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideResetPw();
+    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // MANAGE PRODUCTS
