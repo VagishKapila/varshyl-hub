@@ -1,0 +1,12 @@
+{
+  "name": "@varshyl/hub-reporter",
+  "version": "1.0.0",
+  "description": "Metrics reporter SDK for Varshyl Business Hub — drop into any Varshyl product to auto-report KPIs",
+  "main": "index.js",
+  "keywords": ["varshyl", "metrics", "reporter", "hub"],
+  "author": "Vagish Kapila <vaakapila@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
