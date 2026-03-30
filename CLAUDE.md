@@ -2,7 +2,7 @@
 
 > **READ THIS FIRST** before touching any code.
 > This is the VARSHYL BUSINESS HUB project — the super-admin dashboard for all Varshyl products.
-> **This is NOT ConstructInvoice AI or DocPix Studio** — those are separate repos.
+> **This is NOT ConstructInvoice AI or Docflow** — those are separate repos.
 
 ---
 
@@ -133,7 +133,7 @@ Tables (6 total):
 | Product | Slug | Stripe Account | DB |
 |---------|------|---------------|----|
 | ConstructInvoice AI | `constructinvoice` | `acct_1TG76NAHP8NRRyLC` | Railway Postgres |
-| DocPix Studio | `docpix` | `acct_1TG786AsCE0yP645` | Railway Postgres |
+| Docflow | `docflow` | `acct_1TG786AsCE0yP645` | Railway Postgres |
 
 ---
 
@@ -201,7 +201,7 @@ setTimeout(reportToHub, 30000); // first report 30s after startup
 
 - [ ] Deploy to Railway, configure hub.varshyl.com domain
 - [ ] Add reporter module to ConstructInvoice AI server.js
-- [ ] Add reporter module to DocPix Studio backend
+- [ ] Add reporter module to Docflow backend
 - [ ] Stripe Org API integration (live revenue data)
 - [ ] AI Business Insights (weekly Claude-powered summary)
 - [ ] Subscription control panel (create/archive Stripe prices from Hub)

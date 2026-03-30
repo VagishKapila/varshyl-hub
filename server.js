@@ -433,7 +433,7 @@ app.put('/api/products/:slug', auth, async (req, res) => {
     const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
-    const { name, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, is_active } = req.body;
+    const { name, slug: newSlug, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, is_active } = req.body;
 
     const result = await pool.query(
       `UPDATE products SET
@@ -446,6 +446,7 @@ app.put('/api/products/:slug', auth, async (req, res) => {
         icon = COALESCE($7, icon),
         color = COALESCE($8, color),
         is_active = COALESCE($9, is_active),
+        slug = COALESCE($11, slug),
         updated_at = NOW()
       WHERE id = $10
       RETURNING id, slug, name, url, staging_url, stripe_account_id, subscription_amount, is_active, icon, color, created_at, updated_at`,
@@ -455,7 +456,8 @@ app.put('/api/products/:slug', auth, async (req, res) => {
        subscription_amount !== undefined ? subscription_amount : null,
        icon || null, color || null,
        is_active !== undefined ? is_active : null,
-       product.id]
+       product.id,
+       newSlug || null]
     );
 
     await logActivity(req.user.id, req.params.slug, 'product_updated', { fields: Object.keys(req.body) }, req.ip);
