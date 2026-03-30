@@ -1004,16 +1004,26 @@
           <div class="page-header">
             <div>
               <h1>Activity Log</h1>
-              <div class="subtitle">Recent admin actions</div>
+              <div class="subtitle">Audit trail for all admin actions across Varshyl products</div>
+            </div>
+            <div class="header-actions">
+              <select id="activity-filter-product" onchange="loadActivity()" style="padding:8px 12px;border:2px solid var(--card-border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);cursor:pointer;">
+                <option value="">All Products</option>
+              </select>
+              <select id="activity-filter-action" onchange="loadActivity()" style="padding:8px 12px;border:2px solid var(--card-border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);cursor:pointer;">
+                <option value="">All Actions</option>
+                <option value="metrics_reported">Metrics Reported</option>
+                <option value="product_updated">Product Updated</option>
+                <option value="admin_login">Admin Login</option>
+                <option value="product_registered">Product Registered</option>
+                <option value="user_created">User Created</option>
+                <option value="alert_resolved">Alert Resolved</option>
+              </select>
             </div>
           </div>
-          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr><th>Time</th><th>Product</th><th>Action</th><th>Details</th></tr>
-              </thead>
-              <tbody id="activity-tbody"></tbody>
-            </table>
+          <div id="activity-summary" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;"></div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow:hidden;">
+            <div id="activity-timeline"></div>
           </div>
         </div>
       </main>
@@ -2656,20 +2666,65 @@
     // ═══════════════════════════════════════════════════════════════════════
     async function loadActivity() {
       try {
-        const { data } = await api('GET', '/api/activity');
-        const tbody = document.getElementById('activity-tbody');
-        if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No activity yet</td></tr>';
+        // Populate product filter if empty
+        const filterEl = document.getElementById('activity-filter-product');
+        if (filterEl.options.length <= 1 && dashboardData?.products) {
+          dashboardData.products.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.slug;
+            opt.textContent = `${p.icon} ${p.name}`;
+            filterEl.appendChild(opt);
+          });
+        }
+
+        const productFilter = document.getElementById('activity-filter-product').value;
+        const actionFilter = document.getElementById('activity-filter-action').value;
+        let url = '/api/activity?limit=50';
+        if (productFilter) url += `&product=${encodeURIComponent(productFilter)}`;
+
+        const { data } = await api('GET', url);
+        let filtered = data;
+        if (actionFilter) filtered = data.filter(a => a.action === actionFilter);
+
+        // Summary counts
+        const actionCounts = {};
+        data.forEach(a => { actionCounts[a.action] = (actionCounts[a.action] || 0) + 1; });
+        const summaryEl = document.getElementById('activity-summary');
+        const actionIcons = { product_updated: '⚙️', metrics_reported: '📊', user_created: '👤', product_registered: '📦', admin_login: '🔑', alert_resolved: '✅', product_deleted: '🗑️', admin_created: '👑', key_regenerated: '🔄' };
+        summaryEl.innerHTML = Object.entries(actionCounts).map(([action, count]) => `
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">${actionIcons[action] || '📝'}</span>
+            <div>
+              <div style="font-size:16px;font-weight:700;">${count}</div>
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">${action.replace(/_/g, ' ')}</div>
+            </div>
+          </div>
+        `).join('');
+
+        // Timeline view
+        const timeline = document.getElementById('activity-timeline');
+        if (!filtered.length) {
+          timeline.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No activity matching filters</div>';
           return;
         }
-        tbody.innerHTML = data.map(a => `
-          <tr>
-            <td style="white-space:nowrap;">${fmtTime(a.created_at)}</td>
-            <td>${esc(a.product_slug || '-')}</td>
-            <td><strong>${esc(a.action)}</strong></td>
-            <td style="font-size:11px;color:var(--text-muted);">${esc(JSON.stringify(a.details || {}))}</td>
-          </tr>
-        `).join('');
+        timeline.innerHTML = filtered.map(a => {
+          const icon = actionIcons[a.action] || '📝';
+          const time = timeAgo(new Date(a.created_at));
+          const fullTime = new Date(a.created_at).toLocaleString();
+          const details = a.details || a.metadata || {};
+          const detailStr = Object.keys(details).length ? Object.entries(details).map(([k,v]) => `<span style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:10px;">${esc(k)}: ${esc(String(v).slice(0,50))}</span>`).join(' ') : '';
+          return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid var(--card-border);transition:background 0.15s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+            <span style="font-size:18px;margin-top:2px;">${icon}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:13px;font-weight:600;">${a.action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+                ${a.product_slug ? `<span style="background:var(--primary-bg);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;">${esc(a.product_slug)}</span>` : ''}
+              </div>
+              ${detailStr ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${detailStr}</div>` : ''}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;" title="${fullTime}">${time}</div>
+          </div>`;
+        }).join('');
       } catch(e) {
         console.error('Activity load failed:', e);
       }
