@@ -1,7 +1,7 @@
 /**
- * Varshyl Hub Reporter — Docflow Integration
+ * Varshyl Hub Reporter — Docuflow Integration
  *
- * Drop this file into the Docflow backend (e.g. backend/src/hub-reporter.js)
+ * Drop this file into the Docuflow backend (e.g. backend/src/hub-reporter.js)
  * and call initHubReporter(pool) from your app startup (backend/src/index.ts).
  *
  * Required env vars:
@@ -14,7 +14,7 @@
 const { startReporter } = require('@varshyl/hub-reporter');
 
 /**
- * Initialize the hub reporter with Docflow-specific metrics collection.
+ * Initialize the hub reporter with Docuflow-specific metrics collection.
  * @param {import('pg').Pool} pool — Your PostgreSQL connection pool (Drizzle's underlying pool)
  */
 function initHubReporter(pool) {
@@ -30,7 +30,7 @@ function initHubReporter(pool) {
     intervalMs: 60 * 60 * 1000, // every hour
 
     collector: async () => {
-      // ── User counts (from Docflow schema: users table) ─
+      // ── User counts (from Docuflow schema: users table) ─
       const userStats = await pool.query(`
         SELECT
           COUNT(*) as total,
@@ -88,13 +88,13 @@ function initHubReporter(pool) {
       } catch (e) { /* audit_log may not track emails yet */ }
 
       const proUsers = parseInt(u.pro) || 0;
-      // Docflow is free — MRR is from signing flow payments only
+      // Docuflow is free — MRR is from signing flow payments only
       const mrrCents = 0; // Update when subscription model launches
 
       return {
         total_users: parseInt(u.total) || 0,
         active_users_24h: parseInt(u.active_24h) || 0,
-        trial_users: 0, // Docflow has no trial tier yet
+        trial_users: 0, // Docuflow has no trial tier yet
         pro_users: proUsers,
         churned_users: 0,
         free_override_users: 0,
@@ -107,7 +107,7 @@ function initHubReporter(pool) {
         pdfs_generated_24h: docsStats.pdfs_24h,
         emails_sent_24h: emailsSent,
         metadata: {
-          product: 'docflow',
+          product: 'docuflow',
           total_documents: docsStats.total_docs,
           verified_users: parseInt(u.verified) || 0,
           version: process.env.APP_VERSION || '1.0.0',
@@ -116,7 +116,7 @@ function initHubReporter(pool) {
     },
 
     onSuccess: (metrics) => {
-      console.log(`[HubReporter] Docflow → Hub: ${metrics.total_users} users, ${metrics.pdfs_generated_24h} PDFs today`);
+      console.log(`[HubReporter] Docuflow → Hub: ${metrics.total_users} users, ${metrics.pdfs_generated_24h} PDFs today`);
     },
     onError: (err, phase) => {
       console.error(`[HubReporter] Error (${phase}):`, err.message);
