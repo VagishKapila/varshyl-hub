@@ -989,14 +989,23 @@ app.post('/api/products/:slug/flags', auth, async (req, res) => {
 // ACTIVITY LOG
 // ═══════════════════════════════════════════════════════════════════════════
 
-// GET /api/activity — Recent activity log
+// GET /api/activity — Recent activity log (optional ?product=slug filter)
 app.get('/api/activity', auth, async (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 30));
-    const activity = (await pool.query(
-      'SELECT * FROM activity_log ORDER BY created_at DESC LIMIT $1',
-      [limit]
-    )).rows;
+    const productSlug = req.query.product;
+    let activity;
+    if (productSlug) {
+      activity = (await pool.query(
+        'SELECT * FROM activity_log WHERE product_slug = $1 ORDER BY created_at DESC LIMIT $2',
+        [productSlug, limit]
+      )).rows;
+    } else {
+      activity = (await pool.query(
+        'SELECT * FROM activity_log ORDER BY created_at DESC LIMIT $1',
+        [limit]
+      )).rows;
+    }
     res.json({ data: activity });
   } catch(e) {
     console.error('[GET /api/activity]', e.message);

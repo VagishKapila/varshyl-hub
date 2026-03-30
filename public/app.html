@@ -865,14 +865,28 @@
 
         <!-- PRODUCT DETAIL PAGE -->
         <div id="page-product-detail" class="page hidden">
-          <div class="detail-header">
-            <button class="back-btn" onclick="showPage('dashboard')">← Back</button>
-            <div>
-              <h1 id="detail-product-name"></h1>
-              <div class="subtitle" id="detail-product-url"></div>
+          <div class="detail-header" style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+            <button class="back-btn" onclick="showPage('dashboard')" style="background:var(--card);border:2px solid var(--card-border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);">← Back</button>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <h1 id="detail-product-name" style="margin:0;"></h1>
+                <span id="detail-health-badge" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;"></span>
+              </div>
+              <div class="subtitle" id="detail-product-url" style="margin-top:2px;"></div>
             </div>
+            <div id="detail-header-actions" style="display:flex;gap:8px;"></div>
           </div>
+
+          <!-- Health & Status Bar -->
+          <div id="detail-health-bar" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;"></div>
+
+          <!-- KPIs -->
           <div class="kpi-grid" id="detail-kpis"></div>
+
+          <!-- Activity Metrics Row -->
+          <div id="detail-activity-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0;"></div>
+
+          <!-- Charts -->
           <div class="chart-grid">
             <div class="chart-card">
               <h3>30-Day MRR Trend</h3>
@@ -885,7 +899,29 @@
               <canvas id="chart-detail-users"></canvas>
             </div>
           </div>
-          <div style="margin-top:8px;">
+
+          <!-- Signups & Conversions chart -->
+          <div class="chart-grid" style="margin-top:16px;">
+            <div class="chart-card">
+              <h3>Daily Signups</h3>
+              <div class="chart-subtitle">New user registrations per day</div>
+              <canvas id="chart-detail-signups"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Product Activity</h3>
+              <div class="chart-subtitle">PDFs generated & emails sent daily</div>
+              <canvas id="chart-detail-activity"></canvas>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div style="margin-top:16px;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Recent Activity</h3>
+            <div id="detail-activity-list" style="background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);overflow:hidden;"></div>
+          </div>
+
+          <!-- Users table -->
+          <div style="margin-top:16px;">
             <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Users</h3>
             <div style="margin-bottom:12px;">
               <input type="text" id="user-search" placeholder="Search by name or email..." style="padding:9px 14px;border:2px solid var(--card-border);border-radius:8px;font-size:13px;width:300px;font-family:inherit;" oninput="searchUsers()">
@@ -1577,13 +1613,68 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
       try {
-        const { data } = await api('GET', `/api/products/${slug}/metrics`);
+        const [metricsRes, activityRes] = await Promise.all([
+          api('GET', `/api/products/${slug}/metrics`),
+          api('GET', `/api/activity?product=${slug}&limit=10`).catch(() => ({ data: [] }))
+        ]);
+        const { data } = metricsRes;
         const p = data.product;
         const m = data.latest;
+        const trend = data.trend || [];
 
+        // ── Header with health badge ──
         document.getElementById('detail-product-name').textContent = `${p.icon} ${p.name}`;
         document.getElementById('detail-product-url').textContent = p.url || 'No URL configured';
 
+        // Health badge based on last report time and errors
+        const lastReport = m?.recorded_at ? new Date(m.recorded_at) : null;
+        const hoursSinceReport = lastReport ? (Date.now() - lastReport.getTime()) / (1000 * 60 * 60) : 999;
+        const errors = m?.errors_24h || 0;
+        let healthColor, healthText, healthDot;
+        if (hoursSinceReport > 4) {
+          healthColor = '#9ca3af'; healthText = 'No Data'; healthDot = '⚪';
+        } else if (errors > 10) {
+          healthColor = '#ef4444'; healthText = 'Degraded'; healthDot = '🔴';
+        } else if (errors > 0) {
+          healthColor = '#f59e0b'; healthText = 'Warning'; healthDot = '🟡';
+        } else {
+          healthColor = '#22c55e'; healthText = 'Healthy'; healthDot = '🟢';
+        }
+        const badge = document.getElementById('detail-health-badge');
+        badge.style.background = healthColor + '18';
+        badge.style.color = healthColor;
+        badge.innerHTML = `${healthDot} ${healthText}`;
+
+        // ── Header actions ──
+        document.getElementById('detail-header-actions').innerHTML = `
+          <a href="${p.url}" target="_blank" class="btn-sm" style="background:var(--card);border:2px solid var(--card-border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;text-decoration:none;color:var(--text-secondary);font-weight:500;">Open App ↗</a>
+          ${p.staging_url ? `<a href="${p.staging_url}" target="_blank" class="btn-sm" style="background:var(--card);border:2px solid var(--card-border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;text-decoration:none;color:var(--text-secondary);font-weight:500;">Staging ↗</a>` : ''}
+        `;
+
+        // ── Health bar ──
+        const convRate = (m?.total_users > 0) ? ((m.pro_users || 0) / m.total_users * 100).toFixed(1) : '0.0';
+        const churnRate = (m?.total_users > 0) ? ((m.churned_users || 0) / m.total_users * 100).toFixed(1) : '0.0';
+        const avgResponse = m?.avg_response_ms || 0;
+        document.getElementById('detail-health-bar').innerHTML = `
+          <div style="flex:1;min-width:150px;background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:12px 16px;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Report</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px;">${lastReport ? timeAgo(lastReport) : 'Never'}</div>
+          </div>
+          <div style="flex:1;min-width:150px;background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:12px 16px;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Conversion Rate</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px;color:${parseFloat(convRate) > 5 ? '#22c55e' : '#f59e0b'};">${convRate}%</div>
+          </div>
+          <div style="flex:1;min-width:150px;background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:12px 16px;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Churn Rate</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px;color:${parseFloat(churnRate) > 5 ? '#ef4444' : '#22c55e'};">${churnRate}%</div>
+          </div>
+          <div style="flex:1;min-width:150px;background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:12px 16px;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Avg Response</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px;">${avgResponse > 0 ? avgResponse + 'ms' : 'N/A'}</div>
+          </div>
+        `;
+
+        // ── KPI cards ──
         const kpis = document.getElementById('detail-kpis');
         kpis.innerHTML = `
           <div class="kpi-card highlight">
@@ -1612,8 +1703,49 @@
           </div>
         `;
 
-        // Render trend charts
-        renderDetailCharts(data.trend, p.color);
+        // ── Activity metrics ──
+        document.getElementById('detail-activity-metrics').innerHTML = `
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:14px 18px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:var(--primary);">${fmtNum(m?.signups_24h || 0)}</div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;">Signups Today</div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:14px 18px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:#8b5cf6;">${fmtNum(m?.pdfs_generated_24h || 0)}</div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;">PDFs Generated</div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:14px 18px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:#0ea5e9;">${fmtNum(m?.emails_sent_24h || 0)}</div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;">Emails Sent</div>
+          </div>
+          <div style="background:var(--card);border:2px solid var(--card-border);border-radius:10px;padding:14px 18px;text-align:center;">
+            <div style="font-size:22px;font-weight:700;color:#f59e0b;">${fmtNum(m?.pay_apps_created_24h || 0)}</div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;">Invoices / Signatures</div>
+          </div>
+        `;
+
+        // ── Render trend charts (MRR + Users + new charts) ──
+        renderDetailCharts(trend, p.color);
+
+        // ── Recent activity ──
+        const actList = document.getElementById('detail-activity-list');
+        const activities = activityRes.data || [];
+        if (activities.length === 0) {
+          actList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No recent activity recorded</div>';
+        } else {
+          actList.innerHTML = activities.map(a => {
+            const time = timeAgo(new Date(a.created_at));
+            const actionIcons = { product_updated: '⚙️', metrics_reported: '📊', user_created: '👤', product_registered: '📦', admin_login: '🔑', product_deleted: '🗑️' };
+            const icon = actionIcons[a.action] || '📝';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--card-border);">
+              <span style="font-size:16px;">${icon}</span>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${a.action.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${a.metadata ? JSON.stringify(a.metadata).slice(0, 80) : ''}</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${time}</div>
+            </div>`;
+          }).join('');
+        }
 
         // Load users if DB is connected
         loadProductUsers(slug);
@@ -1623,9 +1755,30 @@
       }
     }
 
+    function timeAgo(date) {
+      const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (seconds < 60) return 'Just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days}d ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
     function renderDetailCharts(trend, color) {
       const labels = trend.map(t => new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
       const baseColor = color || '#6366f1';
+      const chartOpts = (yFmt) => ({
+        responsive: true,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: yFmt || (v => v.toLocaleString()) }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
+          x: { grid: { display: false }, border: { display: false } }
+        }
+      });
 
       // MRR chart
       const mrrCtx = document.getElementById('chart-detail-mrr');
@@ -1633,37 +1786,13 @@
       if (trend.length > 0) {
         chartInstances.detailMrr = new Chart(mrrCtx, {
           type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'MRR',
-              data: trend.map(t => (t.mrr_cents || 0) / 100),
-              borderColor: baseColor,
-              backgroundColor: function(context) {
-                const ctx = context.chart.ctx;
-                const gradient = ctx.createLinearGradient(0, 0, 0, context.chart.height);
-                gradient.addColorStop(0, baseColor + '40');
-                gradient.addColorStop(1, baseColor + '05');
-                return gradient;
-              },
-              fill: true, tension: 0.4,
-              pointBackgroundColor: baseColor,
-              pointBorderColor: '#fff',
-              pointBorderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-              legend: { display: false },
-              tooltip: { callbacks: { label: ctx => `MRR: $${ctx.parsed.y.toLocaleString()}` } }
-            },
-            scales: {
-              y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
-              x: { grid: { display: false }, border: { display: false } }
-            }
-          }
+          data: { labels, datasets: [{
+            label: 'MRR', data: trend.map(t => (t.mrr_cents || 0) / 100),
+            borderColor: baseColor,
+            backgroundColor: (ctx) => { const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height); g.addColorStop(0, baseColor + '40'); g.addColorStop(1, baseColor + '05'); return g; },
+            fill: true, tension: 0.4, pointBackgroundColor: baseColor, pointBorderColor: '#fff', pointBorderWidth: 2
+          }] },
+          options: { ...chartOpts(v => '$' + v.toLocaleString()), plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `MRR: $${ctx.parsed.y.toLocaleString()}` } } } }
         });
       }
 
@@ -1673,29 +1802,39 @@
       if (trend.length > 0) {
         chartInstances.detailUsers = new Chart(usersCtx, {
           type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Total Users',
-              data: trend.map(t => t.total_users || 0),
-              backgroundColor: baseColor + '35',
-              borderColor: baseColor,
-              borderWidth: 2, borderRadius: 6,
-              hoverBackgroundColor: baseColor + '60'
-            }]
-          },
-          options: {
-            responsive: true,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-              legend: { display: false },
-              tooltip: { callbacks: { label: ctx => `Users: ${ctx.parsed.y.toLocaleString()}` } }
-            },
-            scales: {
-              y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() }, grid: { color: '#f0f0f5', drawBorder: false }, border: { display: false } },
-              x: { grid: { display: false }, border: { display: false } }
-            }
-          }
+          data: { labels, datasets: [{
+            label: 'Total Users', data: trend.map(t => t.total_users || 0),
+            backgroundColor: baseColor + '35', borderColor: baseColor, borderWidth: 2, borderRadius: 6, hoverBackgroundColor: baseColor + '60'
+          }] },
+          options: chartOpts()
+        });
+      }
+
+      // Signups chart
+      const signupsCtx = document.getElementById('chart-detail-signups');
+      if (chartInstances.detailSignups) chartInstances.detailSignups.destroy();
+      if (trend.length > 0) {
+        chartInstances.detailSignups = new Chart(signupsCtx, {
+          type: 'bar',
+          data: { labels, datasets: [{
+            label: 'Signups', data: trend.map(t => t.signups_24h || 0),
+            backgroundColor: '#22c55e35', borderColor: '#22c55e', borderWidth: 2, borderRadius: 6, hoverBackgroundColor: '#22c55e60'
+          }] },
+          options: chartOpts()
+        });
+      }
+
+      // Product Activity chart (PDFs + emails)
+      const actCtx = document.getElementById('chart-detail-activity');
+      if (chartInstances.detailActivity) chartInstances.detailActivity.destroy();
+      if (trend.length > 0) {
+        chartInstances.detailActivity = new Chart(actCtx, {
+          type: 'line',
+          data: { labels, datasets: [
+            { label: 'PDFs', data: trend.map(t => t.pdfs_generated_24h || 0), borderColor: '#8b5cf6', backgroundColor: '#8b5cf620', fill: true, tension: 0.4, pointRadius: 3 },
+            { label: 'Emails', data: trend.map(t => t.emails_sent_24h || 0), borderColor: '#0ea5e9', backgroundColor: '#0ea5e920', fill: true, tension: 0.4, pointRadius: 3 }
+          ] },
+          options: { ...chartOpts(), plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 16, font: { size: 11 } } } } }
         });
       }
     }
