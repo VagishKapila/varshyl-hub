@@ -517,6 +517,24 @@
       padding: 4px;
     }
     .alert-item .alert-dismiss:hover { color: var(--danger); }
+    .alert-item.info { border-left: 4px solid var(--info); }
+    .alert-item .alert-badge.info { background: var(--info-bg); color: var(--info); }
+    .alert-item .alert-icon { font-size: 18px; flex-shrink: 0; }
+
+    .alert-filter-btn {
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .alert-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .alert-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
     /* ═══ TABLES ═══ */
     .data-table {
@@ -781,18 +799,43 @@
               <div class="subtitle">Financial overview across all products</div>
             </div>
           </div>
+
+          <!-- KPI Row -->
           <div class="kpi-grid" id="revenue-kpis"></div>
-          <div class="chart-grid">
+
+          <!-- Per-Product Revenue Cards -->
+          <div style="margin-top:24px;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Product Revenue Cards</h3>
+            <div id="revenue-product-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;"></div>
+          </div>
+
+          <!-- Charts -->
+          <div class="chart-grid" style="margin-top:24px;">
             <div class="chart-card">
               <h3>Monthly Revenue by Product</h3>
               <div class="chart-subtitle">Stacked monthly MRR by product over 12 months</div>
               <canvas id="chart-revenue-detail"></canvas>
             </div>
             <div class="chart-card">
+              <h3>MRR Growth Trend</h3>
+              <div class="chart-subtitle">Daily recurring revenue over the past 30 days</div>
+              <canvas id="chart-mrr-trend"></canvas>
+            </div>
+          </div>
+
+          <!-- Revenue Breakdown Donut -->
+          <div class="chart-grid">
+            <div class="chart-card" style="grid-column:1/-1;max-width:450px;">
               <h3>Revenue Breakdown</h3>
               <div class="chart-subtitle">Current MRR distribution by product</div>
               <canvas id="chart-revenue-donut"></canvas>
             </div>
+          </div>
+
+          <!-- Revenue Milestones -->
+          <div style="margin-top:24px;">
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Revenue Milestones</h3>
+            <div id="revenue-milestones" style="display:flex;flex-direction:column;gap:8px;"></div>
           </div>
         </div>
 
@@ -804,6 +847,19 @@
               <div class="subtitle">Active issues across all products</div>
             </div>
           </div>
+
+          <!-- Alert Summary Bar -->
+          <div id="alerts-summary" style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;"></div>
+
+          <!-- Filter Buttons -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <button class="alert-filter-btn active" data-filter="all" onclick="filterAlerts('all')">All</button>
+            <button class="alert-filter-btn" data-filter="critical" onclick="filterAlerts('critical')">Critical</button>
+            <button class="alert-filter-btn" data-filter="warning" onclick="filterAlerts('warning')">Warning</button>
+            <button class="alert-filter-btn" data-filter="info" onclick="filterAlerts('info')">Info</button>
+          </div>
+
+          <!-- Alerts List -->
           <div id="alerts-list"></div>
         </div>
 
@@ -1696,13 +1752,24 @@
     // ═══════════════════════════════════════════════════════════════════════
     async function loadRevenue() {
       try {
-        const { data } = await api('GET', '/api/revenue');
-        const kpis = document.getElementById('revenue-kpis');
-        const totalMRR = data.byProduct.reduce((sum, p) => sum + (p.mrr_cents || 0), 0);
-        const totalRevenue = data.byProduct.reduce((sum, p) => sum + parseInt(p.total_revenue_cents || 0), 0);
-        const totalPro = data.byProduct.reduce((sum, p) => sum + (p.pro_users || 0), 0);
+        // Load both basic and detailed revenue data
+        const [basicRes, detailedRes] = await Promise.all([
+          api('GET', '/api/revenue'),
+          api('GET', '/api/revenue/details')
+        ]);
 
-        kpis.innerHTML = `
+        const basicData = basicRes.data;
+        const detailedData = detailedRes.data;
+
+        // Calculate KPIs
+        const totalMRR = detailedData.product_cards.reduce((sum, p) => sum + (p.mrr || 0), 0);
+        const totalRevenue = detailedData.product_cards.reduce((sum, p) => sum + (p.total_all_time_revenue || 0), 0);
+        const totalPro = detailedData.product_cards.reduce((sum, p) => sum + (p.pro_users || 0), 0);
+        const avgARPU = totalPro > 0 ? Math.round((totalMRR / totalPro) * 100) / 100 : 0;
+
+        // KPI Row
+        const kpiEl = document.getElementById('revenue-kpis');
+        kpiEl.innerHTML = `
           <div class="kpi-card highlight">
             <div class="kpi-label">Total MRR</div>
             <div class="kpi-value">${fmt(totalMRR)}</div>
@@ -1716,20 +1783,46 @@
             <div class="kpi-label">Total Pro Users</div>
             <div class="kpi-value">${fmtNum(totalPro)}</div>
           </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg ARPU</div>
+            <div class="kpi-value">${fmt(avgARPU)}</div>
+          </div>
         `;
 
-        // Revenue detail chart
+        // Product Revenue Cards
+        const cardsEl = document.getElementById('revenue-product-cards');
+        cardsEl.innerHTML = detailedData.product_cards.map(p => {
+          const growth = p.mrr_growth_percent || 0;
+          const growthClass = growth > 0 ? 'up' : growth < 0 ? 'down' : 'flat';
+          const growthIcon = growth > 0 ? '↑' : growth < 0 ? '↓' : '→';
+          return `
+            <div class="card" style="padding:16px;border:2px solid var(--card-border);border-radius:var(--radius);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                <div style="font-size:24px;">${p.icon}</div>
+                <span class="badge ${growthClass}" style="font-size:11px;padding:4px 8px;border-radius:4px;">
+                  ${growthIcon} ${Math.abs(growth)}%
+                </span>
+              </div>
+              <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:4px;">${esc(p.name)}</div>
+              <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">${fmt(p.mrr)}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">/mo</span></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Pro Users: <strong>${fmtNum(p.pro_users)}</strong></div>
+              <div style="font-size:11px;color:var(--text-muted);">ARPU: <strong>${fmt(p.arpu)}</strong></div>
+            </div>
+          `;
+        }).join('');
+
+        // Monthly Revenue Chart (stacked bar)
         const detailCtx = document.getElementById('chart-revenue-detail');
         if (chartInstances.revenueDetail) chartInstances.revenueDetail.destroy();
-        const months = [...new Set(data.monthly.map(d => d.month))].sort();
-        const products = [...new Set(data.monthly.map(d => d.slug))];
+        const months = [...new Set(basicData.monthly.map(d => d.month))].sort();
+        const products = [...new Set(basicData.monthly.map(d => d.slug))];
         if (months.length > 0) {
           chartInstances.revenueDetail = new Chart(detailCtx, {
             type: 'bar',
             data: {
               labels: months.map(m => new Date(m).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })),
               datasets: products.map(slug => {
-                const pd = data.monthly.filter(d => d.slug === slug);
+                const pd = basicData.monthly.filter(d => d.slug === slug);
                 return {
                   label: pd[0]?.name || slug,
                   data: months.map(m => { const e = pd.find(d => d.month === m); return e ? e.mrr_cents / 100 : 0; }),
@@ -1750,27 +1843,103 @@
           });
         }
 
-        // Donut chart
+        // MRR Trend Chart (daily line with gradient)
+        const trendCtx = document.getElementById('chart-mrr-trend');
+        if (chartInstances.mrrTrend) chartInstances.mrrTrend.destroy();
+
+        // Group daily data by product
+        const dates = [...new Set(detailedData.daily_revenue.map(d => d.date))].sort();
+        const trendProducts = [...new Set(detailedData.daily_revenue.map(d => d.slug))];
+
+        if (dates.length > 0 && trendProducts.length > 0) {
+          const productColors = {};
+          detailedData.product_cards.forEach(p => {
+            productColors[p.slug] = p.color;
+          });
+
+          chartInstances.mrrTrend = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+              labels: dates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+              datasets: trendProducts.map(slug => {
+                const productData = detailedData.daily_revenue.filter(d => d.slug === slug);
+                const productCard = detailedData.product_cards.find(p => p.slug === slug);
+                const color = productCard?.color || '#6366f1';
+
+                return {
+                  label: productCard?.name || slug,
+                  data: dates.map(date => {
+                    const entry = productData.find(d => d.date === date);
+                    return entry ? entry.mrr_cents / 100 : null;
+                  }),
+                  borderColor: color,
+                  backgroundColor: color + '20',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 2,
+                  pointHoverRadius: 4,
+                  pointBackgroundColor: color,
+                  pointBorderColor: '#fff',
+                  pointBorderWidth: 2
+                };
+              })
+            },
+            options: {
+              responsive: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } },
+                filler: { propagate: true }
+              },
+              scales: {
+                x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { callback: v => '$' + v, font: { family: 'Inter', size: 11 } }, grid: { color: '#f0f0f5' } }
+              }
+            }
+          });
+        }
+
+        // Donut chart with center text
         const donutCtx = document.getElementById('chart-revenue-donut');
         if (chartInstances.revenueDonut) chartInstances.revenueDonut.destroy();
-        const donutData = data.byProduct.filter(p => (p.mrr_cents || 0) > 0);
+        const donutData = detailedData.product_cards.filter(p => (p.mrr || 0) > 0);
         if (donutData.length > 0) {
           chartInstances.revenueDonut = new Chart(donutCtx, {
             type: 'doughnut',
             data: {
               labels: donutData.map(p => p.name),
               datasets: [{
-                data: donutData.map(p => p.mrr_cents / 100),
+                data: donutData.map(p => p.mrr / 100),
                 backgroundColor: donutData.map(p => p.color || '#6366f1'),
                 borderWidth: 2, borderColor: '#fff'
               }]
             },
             options: {
               responsive: true,
-              cutout: '65%',
-              plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } } }
+              cutout: '60%',
+              plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmt(ctx.parsed)}` } }
+              }
             }
           });
+        }
+
+        // Revenue Milestones
+        const milestonesEl = document.getElementById('revenue-milestones');
+        if (detailedData.milestones.length > 0) {
+          milestonesEl.innerHTML = detailedData.milestones.map(m => `
+            <div style="padding:12px;background:var(--card);border:2px solid var(--card-border);border-radius:var(--radius);display:flex;align-items:center;gap:12px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex-shrink:0;">✓</div>
+              <div>
+                <div style="font-weight:600;font-size:13px;color:var(--text-primary);">${esc(m.title)}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${esc(m.description)} — ${fmtTime(m.date)}</div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          milestonesEl.innerHTML = '<div style="color:var(--text-muted);padding:16px;text-align:center;">No milestones yet.</div>';
         }
       } catch(e) {
         console.error('Revenue load failed:', e);
@@ -1780,34 +1949,123 @@
     // ═══════════════════════════════════════════════════════════════════════
     // ALERTS PAGE
     // ═══════════════════════════════════════════════════════════════════════
+    let allAlerts = [];
+    let currentAlertFilter = 'all';
+
     async function loadAlerts() {
       try {
-        const { data } = await api('GET', '/api/alerts');
-        const el = document.getElementById('alerts-list');
-        if (!data.length) {
-          el.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No active alerts</h3><p>All systems running smoothly.</p></div>`;
+        const [alertsRes, summaryRes] = await Promise.all([
+          api('GET', '/api/alerts'),
+          api('GET', '/api/alerts/summary')
+        ]);
+
+        allAlerts = alertsRes.data;
+        const summary = summaryRes.data;
+
+        // Render summary bar
+        const summaryEl = document.getElementById('alerts-summary');
+        const summaryItems = [];
+
+        if (summary.total_active > 0) {
+          summaryItems.push(`<div style="font-weight:600;color:var(--text-primary);">Active Alerts: <span style="font-size:14px;color:var(--text-muted);">${summary.total_active}</span></div>`);
+        } else {
+          summaryEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--success);"><span style="font-size:16px;">✓</span><span>All clear</span></div>`;
+          renderAlerts([]);
           return;
         }
-        el.innerHTML = data.map(a => `
-          <div class="alert-item ${a.severity}">
-            <span class="alert-badge ${a.severity}">${a.severity}</span>
-            <div>
-              <div class="alert-text">${esc(a.title)}</div>
-              <div class="alert-product">${esc(a.product_name)} &middot; ${fmtTime(a.created_at)}</div>
-              ${a.message ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(a.message)}</div>` : ''}
-            </div>
-            <button class="alert-dismiss" onclick="resolveAlert(${a.id})" title="Resolve">&times;</button>
-          </div>
-        `).join('');
+
+        if (summary.critical_count > 0) {
+          summaryItems.push(`<div style="background:var(--danger-bg);color:var(--danger);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;">${summary.critical_count} Critical</div>`);
+        }
+        if (summary.warning_count > 0) {
+          summaryItems.push(`<div style="background:var(--warning-bg);color:var(--warning);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;">${summary.warning_count} Warning</div>`);
+        }
+        if (summary.info_count > 0) {
+          summaryItems.push(`<div style="background:var(--info-bg);color:var(--info);padding:4px 10px;border-radius:4px;font-size:12px;font-weight:600;">${summary.info_count} Info</div>`);
+        }
+
+        summaryItems.push(`<button class="btn-sm primary" onclick="resolveAllAlerts()" style="margin-left:auto;">Resolve All</button>`);
+
+        summaryEl.innerHTML = summaryItems.join('');
+
+        // Render filtered alerts
+        filterAlerts('all');
       } catch(e) {
         console.error('Alerts load failed:', e);
       }
+    }
+
+    function filterAlerts(severity) {
+      currentAlertFilter = severity;
+
+      // Update filter button states
+      document.querySelectorAll('.alert-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === severity);
+      });
+
+      // Filter alerts
+      const filtered = severity === 'all' ? allAlerts : allAlerts.filter(a => a.severity === severity);
+
+      renderAlerts(filtered);
+    }
+
+    function renderAlerts(alerts) {
+      const el = document.getElementById('alerts-list');
+
+      if (!alerts.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No ${currentAlertFilter === 'all' ? 'active alerts' : currentAlertFilter + ' alerts'}</h3><p>All systems running smoothly.</p></div>`;
+        return;
+      }
+
+      // Group alerts by product
+      const grouped = {};
+      alerts.forEach(a => {
+        if (!grouped[a.product_slug]) {
+          grouped[a.product_slug] = {
+            name: a.product_name,
+            icon: a.product_icon,
+            alerts: []
+          };
+        }
+        grouped[a.product_slug].alerts.push(a);
+      });
+
+      el.innerHTML = Object.entries(grouped).map(([slug, group]) => `
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-left:4px;">
+            <span style="font-size:16px;">${group.icon}</span>
+            <h4 style="font-size:13px;font-weight:600;color:var(--text-primary);margin:0;">${esc(group.name)}</h4>
+            <span style="font-size:11px;color:var(--text-muted);">${group.alerts.length} alert${group.alerts.length !== 1 ? 's' : ''}</span>
+          </div>
+          ${group.alerts.map(a => `
+            <div class="alert-item ${a.severity}">
+              <span class="alert-badge ${a.severity}">${a.severity.toUpperCase()}</span>
+              <div style="flex:1;">
+                <div class="alert-text">${esc(a.title)}</div>
+                ${a.message ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(a.message)}</div>` : ''}
+                <div class="alert-product" style="margin-top:4px;">${fmtTime(a.created_at)}</div>
+              </div>
+              <button class="alert-dismiss" onclick="resolveAlert(${a.id})" title="Resolve">&times;</button>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
     }
 
     async function resolveAlert(id) {
       try {
         await api('POST', `/api/alerts/${id}/resolve`);
         toast('Alert resolved', 'success');
+        loadAlerts();
+        loadDashboard();
+      } catch(e) { toast(e.message, 'error'); }
+    }
+
+    async function resolveAllAlerts() {
+      if (!confirm('Resolve all active alerts?')) return;
+      try {
+        const result = await api('POST', '/api/alerts/resolve-all');
+        toast(`${result.data.resolved_count} alerts resolved`, 'success');
         loadAlerts();
         loadDashboard();
       } catch(e) { toast(e.message, 'error'); }

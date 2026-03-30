@@ -764,6 +764,118 @@ app.get('/api/revenue', auth, async (req, res) => {
   }
 });
 
+// GET /api/revenue/details — Enhanced revenue data with product cards, daily trend, and milestones
+app.get('/api/revenue/details', auth, async (req, res) => {
+  try {
+    // Per-product revenue cards with current month and previous month comparison
+    const products = (await pool.query(
+      `SELECT p.id, p.slug, p.name, p.color, p.icon FROM products WHERE p.is_active = true ORDER BY p.name`
+    )).rows;
+
+    const productCards = [];
+    for (const p of products) {
+      // Latest snapshot
+      const latest = (await pool.query(
+        `SELECT ms.mrr_cents, ms.pro_users, ms.total_revenue_cents FROM metrics_snapshots ms
+         WHERE ms.product_id = $1 ORDER BY ms.recorded_at DESC LIMIT 1`,
+        [p.id]
+      )).rows[0];
+
+      // Previous month's MRR (30 days ago)
+      const previous = (await pool.query(
+        `SELECT ms.mrr_cents FROM metrics_snapshots ms
+         WHERE ms.product_id = $1 AND ms.recorded_at < NOW() - INTERVAL '30 days'
+         ORDER BY ms.recorded_at DESC LIMIT 1`,
+        [p.id]
+      )).rows[0];
+
+      const currentMRR = latest?.mrr_cents || 0;
+      const previousMRR = previous?.mrr_cents || 0;
+      const mrrGrowth = previousMRR > 0 ? ((currentMRR - previousMRR) / previousMRR) * 100 : 0;
+      const proUsers = latest?.pro_users || 0;
+      const arpu = proUsers > 0 ? currentMRR / proUsers : 0;
+
+      productCards.push({
+        name: p.name,
+        slug: p.slug,
+        color: p.color,
+        icon: p.icon,
+        mrr: currentMRR,
+        previous_month_mrr: previousMRR,
+        mrr_growth_percent: Math.round(mrrGrowth * 100) / 100,
+        total_all_time_revenue: latest?.total_revenue_cents || 0,
+        pro_users: proUsers,
+        arpu: Math.round(arpu * 100) / 100
+      });
+    }
+
+    // Daily revenue data for last 30 days
+    const dailyRevenue = (await pool.query(
+      `SELECT DATE(ms.recorded_at) as date, p.slug, MAX(ms.mrr_cents) as mrr_cents
+       FROM metrics_snapshots ms
+       JOIN products p ON ms.product_id = p.id
+       WHERE ms.recorded_at > NOW() - INTERVAL '30 days'
+       GROUP BY DATE(ms.recorded_at), p.slug
+       ORDER BY date ASC`
+    )).rows;
+
+    // Revenue milestones (significant events)
+    const milestones = [];
+
+    // Find first $1K MRR
+    const first1k = (await pool.query(
+      `SELECT MIN(recorded_at) as date FROM metrics_snapshots
+       WHERE mrr_cents >= 100000`
+    )).rows[0];
+    if (first1k?.date) {
+      milestones.push({
+        title: 'First $1K MRR',
+        date: first1k.date,
+        description: 'First month with $1,000 MRR achieved'
+      });
+    }
+
+    // Find first 100 pro users
+    const first100users = (await pool.query(
+      `SELECT MIN(recorded_at) as date FROM metrics_snapshots
+       WHERE pro_users >= 100`
+    )).rows[0];
+    if (first100users?.date) {
+      milestones.push({
+        title: '100 Pro Users',
+        date: first100users.date,
+        description: 'Reached 100 paying customers'
+      });
+    }
+
+    // Find $10K MRR milestone
+    const first10k = (await pool.query(
+      `SELECT MIN(recorded_at) as date FROM metrics_snapshots
+       WHERE mrr_cents >= 1000000`
+    )).rows[0];
+    if (first10k?.date) {
+      milestones.push({
+        title: '$10K MRR Milestone',
+        date: first10k.date,
+        description: 'Achieved $10,000 monthly recurring revenue'
+      });
+    }
+
+    milestones.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    res.json({
+      data: {
+        product_cards: productCards,
+        daily_revenue: dailyRevenue,
+        milestones: milestones
+      }
+    });
+  } catch(e) {
+    console.error('[GET /api/revenue/details]', e.message);
+    res.status(500).json({ error: 'Failed to load revenue details' });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ALERTS API
 // ═══════════════════════════════════════════════════════════════════════════
@@ -791,6 +903,54 @@ app.post('/api/alerts/:id/resolve', auth, async (req, res) => {
   } catch(e) {
     console.error('[POST /api/alerts/:id/resolve]', e.message);
     res.status(500).json({ error: 'Failed to resolve alert' });
+  }
+});
+
+// GET /api/alerts/summary — Alert summary with counts by severity and type
+app.get('/api/alerts/summary', auth, async (req, res) => {
+  try {
+    const summary = (await pool.query(
+      `SELECT
+        COUNT(*) as total_active,
+        SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical_count,
+        SUM(CASE WHEN severity = 'warning' THEN 1 ELSE 0 END) as warning_count,
+        SUM(CASE WHEN severity = 'info' THEN 1 ELSE 0 END) as info_count
+       FROM alerts WHERE resolved = false`
+    )).rows[0];
+
+    const typeCounts = (await pool.query(
+      `SELECT type, COUNT(*) as count
+       FROM alerts WHERE resolved = false
+       GROUP BY type ORDER BY count DESC`
+    )).rows;
+
+    res.json({
+      data: {
+        total_active: parseInt(summary.total_active) || 0,
+        critical_count: parseInt(summary.critical_count) || 0,
+        warning_count: parseInt(summary.warning_count) || 0,
+        info_count: parseInt(summary.info_count) || 0,
+        by_type: typeCounts
+      }
+    });
+  } catch(e) {
+    console.error('[GET /api/alerts/summary]', e.message);
+    res.status(500).json({ error: 'Failed to load alert summary' });
+  }
+});
+
+// POST /api/alerts/resolve-all — Resolve all active alerts
+app.post('/api/alerts/resolve-all', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE alerts SET resolved = true, resolved_at = NOW() WHERE resolved = false RETURNING id'
+    );
+    const count = result.rows.length;
+    await logActivity(req.user.id, null, 'all_alerts_resolved', { count }, req.ip);
+    res.json({ message: `Resolved ${count} alerts`, data: { resolved_count: count } });
+  } catch(e) {
+    console.error('[POST /api/alerts/resolve-all]', e.message);
+    res.status(500).json({ error: 'Failed to resolve all alerts' });
   }
 });
 
