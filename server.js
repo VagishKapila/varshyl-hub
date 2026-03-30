@@ -769,7 +769,7 @@ app.get('/api/revenue/details', auth, async (req, res) => {
   try {
     // Per-product revenue cards with current month and previous month comparison
     const products = (await pool.query(
-      `SELECT p.id, p.slug, p.name, p.color, p.icon FROM products WHERE p.is_active = true ORDER BY p.name`
+      `SELECT id, slug, name, color, icon FROM products WHERE is_active = true ORDER BY name`
     )).rows;
 
     const productCards = [];
