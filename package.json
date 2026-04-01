@@ -7,7 +7,13 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "build": "cd client && npm install && npm run build",
-    "postinstall": "cd client && npm install && npm run build"
+    "postinstall": "cd client && npm install && npm run build",
+    "lint": "npx eslint server/ reporter-sdk/",
+    "lint:client": "cd client && npx eslint src/",
+    "lint:all": "npm run lint && npm run lint:client",
+    "test": "npx jest",
+    "test:client": "cd client && npx vitest run",
+    "test:all": "npm test && npm run test:client"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,6 +29,17 @@
   "engines": {
     "node": ">=18"
   },
+  "jest": {
+    "testMatch": ["<rootDir>/server/__tests__/**/*.test.js"],
+    "modulePathIgnorePatterns": ["<rootDir>/varshyl-hub-reporter/", "<rootDir>/client/"]
+  },
   "author": "Vagish Kapila <vaakapila@gmail.com>",
-  "license": "PRIVATE"
+  "license": "PRIVATE",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
 }
