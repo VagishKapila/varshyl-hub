@@ -1,11 +1,13 @@
 {
   "name": "varshyl-hub",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Varshyl Business Hub — Super admin dashboard for all Varshyl SaaS products",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "build": "cd client && npm install && npm run build",
+    "postinstall": "cd client && npm install && npm run build"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
