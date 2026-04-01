@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "build": "cd client && npm install --omit=dev && npm run build",
-    "postinstall": "cd client && npm install --omit=dev && npm run build",
+    "build": "cd client && npm install && npm run build",
+    "postinstall": "cd client && npm install && npm run build",
     "lint": "npx eslint server/ reporter-sdk/",
     "lint:client": "cd client && npx eslint src/",
     "lint:all": "npm run lint && npm run lint:client",
