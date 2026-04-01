@@ -20,14 +20,14 @@ export const Login = ({ onSuccess }) => {
 
     try {
       if (isSetup) {
-        const result = await api.post('/auth/setup', { name, email, password });
+        const result = await api.post('/api/auth/setup', { name, email, password });
         if (result.data) {
           login(result.data, result.token);
           addToast('Account created successfully!', 'success');
           onSuccess();
         }
       } else {
-        const result = await api.post('/auth/login', { email, password });
+        const result = await api.post('/api/auth/login', { email, password });
         if (result.data) {
           login(result.data, result.token);
           addToast('Logged in successfully!', 'success');

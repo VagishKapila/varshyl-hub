@@ -1,6 +1,6 @@
 class APIClient {
   constructor() {
-    this.baseURL = '/api';
+    this.baseURL = '';
   }
 
   async request(method, path, body = null) {
