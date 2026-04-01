@@ -42,13 +42,15 @@ export const Dashboard = () => {
     };
   };
 
-  if (dashLoading || !dashboard?.data) {
+  if (dashLoading || !dashboard?.data?.kpis) {
     return <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading dashboard...</div>;
   }
 
-  const k = dashboard.data;
+  const k = dashboard.data.kpis;
+  const mrrDollars = (k.mrr_cents || 0) / 100;
   const convRate = k.total_users > 0 ? (((k.pro_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
   const churnRate = k.total_users > 0 ? (((k.churned_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
+  const productsList = dashboard.data.products || [];
 
   const revenueChartData = formatChartData(revenueTrend?.data);
   const userChartData = formatChartData(userGrowth?.data);
@@ -58,13 +60,13 @@ export const Dashboard = () => {
       <PageHeader title="Dashboard" subtitle="Overview of all products and metrics" />
 
       <div className="kpi-grid">
-        <KpiCard label="Total Revenue" value={`$${formatNumber(k.total_mrr)}`} icon="💰" variant="highlight" />
+        <KpiCard label="Total MRR" value={`$${formatNumber(mrrDollars)}`} icon="💰" variant="highlight" />
         <KpiCard label="Total Users" value={formatNumber(k.total_users)} icon="👥" />
         <KpiCard label="Conversion Rate" value={`${convRate}%`} icon="📈" />
         <KpiCard
           label="Active Products"
-          value={k.active_products}
-          sub={`${k.total_products || 0} total`}
+          value={k.product_count || 0}
+          sub={`${k.signups_24h || 0} signups today`}
           icon="📦"
         />
       </div>
@@ -109,21 +111,21 @@ export const Dashboard = () => {
             gap: '16px',
           }}
         >
-          {dashboard.products && dashboard.products.map((p) => (
+          {productsList.map(({ product: p, metrics: m }) => (
             <div key={p.id} className="product-card">
               <div className="product-header">
                 <div className="product-icon">{p.icon || '📦'}</div>
                 <div className="product-name">{p.name}</div>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                <Badge status={p.status === 'active' ? 'success' : 'warning'}>{p.status}</Badge>
+                <Badge status={p.is_active ? 'success' : 'warning'}>{p.is_active ? 'active' : 'inactive'}</Badge>
               </div>
               <div className="product-metrics">
                 <div>
-                  Users: <strong>{formatNumber(p.users || 0)}</strong>
+                  Users: <strong>{formatNumber(m?.total_users || 0)}</strong>
                 </div>
                 <div>
-                  MRR: <strong>${formatNumber(p.mrr || 0)}</strong>
+                  MRR: <strong>${formatNumber((m?.mrr_cents || 0) / 100)}</strong>
                 </div>
               </div>
             </div>
