@@ -12,7 +12,7 @@ import { useToast } from '../hooks/useToast';
 
 export const ProductDetail = ({ productSlug, product }) => {
   const { data: metrics } = useApi(`/api/products/${productSlug}/metrics`);
-  const { data: activity } = useApi(`/api/activity?product=${productSlug}&limit=10`).catch(() => ({ data: [] }));
+  const { data: activity } = useApi(`/api/activity?product=${productSlug}&limit=10`);
   const { data: users, refetch: refetchUsers } = useApi(
     `/api/products/${productSlug}/users?search=&limit=50`
   );

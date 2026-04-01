@@ -64,7 +64,7 @@ export const Dashboard = () => {
         <KpiCard
           label="Active Products"
           value={k.active_products}
-          sub={`${k.total_products} total`}
+          sub={`${k.total_products || 0} total`}
           icon="📦"
         />
       </div>
