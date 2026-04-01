@@ -12,9 +12,10 @@ export const Revenue = () => {
   const { data: details } = useApi('/api/revenue/details');
 
   const formatNumber = (n) => {
+    if (n == null || isNaN(n)) return '0';
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return n.toFixed(0);
+    return Number(n).toFixed(0);
   };
 
   const formatChartData = (data) => {

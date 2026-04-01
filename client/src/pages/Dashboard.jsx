@@ -13,9 +13,10 @@ export const Dashboard = () => {
   const { data: alerts } = useApi('/api/alerts/summary');
 
   const formatNumber = (n) => {
+    if (n == null || isNaN(n)) return '0';
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return n.toFixed(0);
+    return Number(n).toFixed(0);
   };
 
   const getAlertColor = (severity) => {
@@ -46,8 +47,8 @@ export const Dashboard = () => {
   }
 
   const k = dashboard.data;
-  const convRate = k.total_users > 0 ? ((k.pro_users / k.total_users) * 100).toFixed(1) : '0.0';
-  const churnRate = k.total_users > 0 ? ((k.churned_users / k.total_users) * 100).toFixed(1) : '0.0';
+  const convRate = k.total_users > 0 ? (((k.pro_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
+  const churnRate = k.total_users > 0 ? (((k.churned_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
 
   const revenueChartData = formatChartData(revenueTrend?.data);
   const userChartData = formatChartData(userGrowth?.data);
