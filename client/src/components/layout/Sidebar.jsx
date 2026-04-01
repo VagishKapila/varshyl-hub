@@ -1,15 +1,13 @@
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 
 export const Sidebar = ({ currentPage, onNavigate }) => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const { data: products } = useApi('/api/products');
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    // App.jsx re-renders to Login when token is cleared
   };
 
   const getInitials = (name) => {
