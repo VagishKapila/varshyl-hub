@@ -11,12 +11,12 @@ export const ActivityLog = () => {
   }
 
   const filtered = activity.data.filter((a) =>
-    searchTerm === '' || a.description.toLowerCase().includes(searchTerm.toLowerCase()) || a.product.toLowerCase().includes(searchTerm.toLowerCase())
+    searchTerm === '' || (a.action || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.product_slug || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const groupedByDate = {};
   filtered.forEach((act) => {
-    const date = new Date(act.timestamp).toLocaleDateString('en-US', {
+    const date = new Date(act.created_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -59,14 +59,14 @@ export const ActivityLog = () => {
                 {activities.map((act, idx) => (
                   <div key={idx} className="activity-item">
                     <div className="activity-time">
-                      {new Date(act.timestamp).toLocaleTimeString('en-US', {
+                      {new Date(act.created_at).toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
                         second: '2-digit',
                       })}
                     </div>
                     <div className="activity-text">
-                      <strong>{act.product}</strong> — {act.description}
+                      <strong>{act.product_slug || 'System'}</strong> — {act.action}
                     </div>
                   </div>
                 ))}
