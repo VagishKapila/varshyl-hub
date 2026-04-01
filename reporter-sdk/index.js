@@ -127,7 +127,7 @@ class VarshylHubReporter {
       return;
     }
 
-    // Sanitize — only send known numeric fields + metadata
+    // Sanitize — only send known numeric fields + metadata + collected_at
     const payload = {};
     for (const field of METRIC_FIELDS) {
       if (field === 'metadata') {
@@ -136,6 +136,9 @@ class VarshylHubReporter {
         payload[field] = Math.max(0, parseInt(metrics[field]) || 0);
       }
     }
+
+    // Timestamp when the product collected these metrics
+    payload.collected_at = new Date().toISOString();
 
     // POST with retries
     for (let attempt = 1; attempt <= this.retryCount; attempt++) {
@@ -156,7 +159,8 @@ class VarshylHubReporter {
         }
 
         const data = await res.json();
-        console.log(`[VarshylHubReporter] ✓ Reported to ${data.product || 'hub'} — ${payload.total_users || 0} users, $${((payload.mrr_cents || 0) / 100).toFixed(0)} MRR`);
+        const productSlug = data.data?.product || data.product || 'hub';
+        console.log(`[VarshylHubReporter] ✓ Reported to ${productSlug} — ${payload.total_users || 0} users, $${((payload.mrr_cents || 0) / 100).toFixed(0)} MRR`);
 
         if (this.onSuccess) this.onSuccess(payload, data);
         return data;

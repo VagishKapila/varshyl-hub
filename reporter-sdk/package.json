@@ -1,12 +1,30 @@
 {
   "name": "@varshyl/hub-reporter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Metrics reporter SDK for Varshyl Business Hub — drop into any Varshyl product to auto-report KPIs",
   "main": "index.js",
-  "keywords": ["varshyl", "metrics", "reporter", "hub"],
+  "files": [
+    "index.js",
+    "integrations/",
+    "README.md"
+  ],
+  "keywords": ["varshyl", "metrics", "reporter", "hub", "saas", "kpi"],
   "author": "Vagish Kapila <vaakapila@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VagishKapila/varshyl-hub.git",
+    "directory": "reporter-sdk"
+  },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "pg": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
   }
 }

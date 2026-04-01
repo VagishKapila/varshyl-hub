@@ -24,14 +24,20 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
-    "stripe": "^21.0.0"
+    "stripe": "^21.0.0",
+    "zod": "^4.3.6"
   },
   "engines": {
     "node": ">=18"
   },
   "jest": {
-    "testMatch": ["<rootDir>/server/__tests__/**/*.test.js"],
-    "modulePathIgnorePatterns": ["<rootDir>/varshyl-hub-reporter/", "<rootDir>/client/"]
+    "testMatch": [
+      "<rootDir>/server/__tests__/**/*.test.js"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/varshyl-hub-reporter/",
+      "<rootDir>/client/"
+    ]
   },
   "author": "Vagish Kapila <vaakapila@gmail.com>",
   "license": "PRIVATE",

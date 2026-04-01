@@ -54,6 +54,9 @@ async function initDB() {
       emails_sent_24h INTEGER DEFAULT 0,
       metadata JSONB DEFAULT '{}'
     );
+    -- Add collected_at column if it doesn't exist (tracks when product collected vs when hub received)
+    ALTER TABLE metrics_snapshots ADD COLUMN IF NOT EXISTS collected_at TIMESTAMPTZ;
+
     CREATE INDEX IF NOT EXISTS idx_snapshots_product ON metrics_snapshots(product_id);
     CREATE INDEX IF NOT EXISTS idx_snapshots_recorded ON metrics_snapshots(recorded_at);
     CREATE INDEX IF NOT EXISTS idx_snapshots_product_time ON metrics_snapshots(product_id, recorded_at DESC);

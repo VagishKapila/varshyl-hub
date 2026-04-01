@@ -16,6 +16,8 @@ const cors = require('cors');
 
 // Error handler
 const { errorHandler } = require('./middleware/errorHandler');
+// Metrics retention
+const { pruneOldSnapshots } = require('./services/metrics.service');
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
@@ -27,6 +29,7 @@ const alertsRoutes = require('./routes/alerts.routes');
 const activityRoutes = require('./routes/activity.routes');
 const chartsRoutes = require('./routes/charts.routes');
 const reportRoutes = require('./routes/report.routes');
+const productApiRoutes = require('./routes/product-api.routes');
 const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
@@ -64,6 +67,7 @@ app.use('/api/alerts', alertsRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/charts', chartsRoutes);
 app.use('/api/v1/report', reportRoutes);
+app.use('/api/v1', productApiRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
@@ -104,6 +108,10 @@ async function start() {
       console.log(`[Varshyl Hub] Admin emails: ${config.ADMIN_EMAILS.join(', ')}`);
       console.log(`[Varshyl Hub] Environment: ${config.NODE_ENV}`);
     });
+
+    // Daily retention pruning — run once on startup, then every 24h
+    pruneOldSnapshots(90).catch(() => {});
+    setInterval(() => pruneOldSnapshots(90).catch(() => {}), 24 * 60 * 60 * 1000);
   } catch (err) {
     console.error('[FATAL] Startup failed:', err.message);
     process.exit(1);
