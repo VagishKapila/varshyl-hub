@@ -98,6 +98,20 @@ async function initDB() {
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(product_id, flag_key)
     );
+
+    -- ═══ Analytics Events (webhook-received events from products) ═══
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+      event VARCHAR(100) NOT NULL,
+      user_id VARCHAR(255),
+      metadata JSONB DEFAULT '{}',
+      timestamp TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_analytics_product ON analytics_events(product_id);
+    CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics_events(event);
+    CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics_events(timestamp DESC);
     `);
     console.log('[DB] Database initialized');
   } catch (err) {

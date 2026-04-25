@@ -31,6 +31,7 @@ const chartsRoutes = require('./routes/charts.routes');
 const reportRoutes = require('./routes/report.routes');
 const productApiRoutes = require('./routes/product-api.routes');
 const adminRoutes = require('./routes/admin.routes');
+const formiqWebhook = require('./routes/webhooks/formiq');
 
 const app = express();
 
@@ -69,6 +70,9 @@ app.use('/api/charts', chartsRoutes);
 app.use('/api/v1/report', reportRoutes);
 app.use('/api/v1', productApiRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Webhook Routes
+app.use('/webhook', formiqWebhook);
 
 // Health check
 app.get('/health', async (req, res) => {
