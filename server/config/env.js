@@ -11,7 +11,7 @@ const config = {
     .map(e => e.trim().toLowerCase()),
   STRIPE_ORG_KEY: process.env.STRIPE_ORG_KEY || null,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || null,
-  DIGEST_EMAIL: process.env.DIGEST_EMAIL || 'vaakapila@gmail.com',
+  DIGEST_EMAIL: process.env.DIGEST_EMAIL || 'kapilav@varshyl.com',
   RESEND_API_KEY: process.env.RESEND_API_KEY || null,
 };
 
