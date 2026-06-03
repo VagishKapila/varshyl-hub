@@ -1,6 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../services/api';
 
 const AuthContext = createContext(null);
+
+async function fetchUserProfile() {
+  try {
+    const result = await api.get('/api/admins/me');
+    return result.data || null;
+  } catch {
+    return null;
+  }
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -8,20 +18,33 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('vhub_token');
-    const savedUser = localStorage.getItem('vhub_user');
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const init = async () => {
+      const savedToken = localStorage.getItem('vhub_token');
+      const savedUser = localStorage.getItem('vhub_user');
+      if (savedToken && savedUser) {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+        const profile = await fetchUserProfile();
+        if (profile) {
+          setUser(profile);
+          localStorage.setItem('vhub_user', JSON.stringify(profile));
+        }
+      }
+      setLoading(false);
+    };
+    init();
   }, []);
 
-  const login = (userData, authToken) => {
+  const login = async (userData, authToken) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem('vhub_token', authToken);
     localStorage.setItem('vhub_user', JSON.stringify(userData));
+    const profile = await fetchUserProfile();
+    if (profile) {
+      setUser(profile);
+      localStorage.setItem('vhub_user', JSON.stringify(profile));
+    }
   };
 
   const logout = () => {

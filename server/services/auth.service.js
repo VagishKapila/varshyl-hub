@@ -86,4 +86,43 @@ async function setup(name, email, password, ip) {
   }
 }
 
-module.exports = { login, setup };
+async function requestPasswordReset(email) {
+  const crypto = require('crypto');
+  const normalEmail = email.trim().toLowerCase();
+  const user = (await pool.query('SELECT * FROM hub_users WHERE email = $1', [normalEmail])).rows[0];
+  if (!user) return { message: 'If that email exists, a reset link has been sent.' };
+  const token = crypto.randomBytes(32).toString('hex');
+  await pool.query(
+    "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, NOW() + INTERVAL '1 hour')",
+    [user.id, token]
+  );
+  const resetUrl = `${config.HUB_URL}/?reset_token=${token}`;
+  if (config.RESEND_API_KEY) {
+    const { Resend } = require('resend');
+    const resend = new Resend(config.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: normalEmail,
+      subject: 'Varshyl Hub — Password Reset',
+      html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto"><div style="background:#1A0E16;color:#F5E9E0;padding:24px;border-radius:12px 12px 0 0"><h2 style="margin:0;font-size:18px">Varshyl Hub — Password Reset</h2></div><div style="background:#fff;padding:24px;border:1px solid #e8e8f0;border-radius:0 0 12px 12px"><p>Click below to reset your password. Expires in 1 hour.</p><a href="${resetUrl}" style="display:inline-block;background:#E6A96C;color:#0F0A0D;padding:12px 24px;border-radius:8px;font-weight:700;text-decoration:none;margin:16px 0">Reset Password</a><p style="color:#888;font-size:12px">If you didn't request this, ignore this email.</p></div></div>`
+    });
+  } else {
+    console.log('[Password Reset Token DEV]', resetUrl);
+  }
+  return { message: 'If that email exists, a reset link has been sent.' };
+}
+
+async function resetPasswordWithToken(token, newPassword) {
+  const row = (await pool.query(
+    'SELECT * FROM password_reset_tokens WHERE token = $1 AND used = false AND expires_at > NOW()',
+    [token]
+  )).rows[0];
+  if (!row) throw { status: 400, message: 'Invalid or expired reset token' };
+  const hash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE hub_users SET password_hash = $1 WHERE id = $2', [hash, row.user_id]);
+  await pool.query('UPDATE password_reset_tokens SET used = true WHERE id = $1', [row.id]);
+  await logActivity(row.user_id, null, 'password_reset', {}, null);
+  return { message: 'Password reset successfully' };
+}
+
+module.exports = { login, setup, requestPasswordReset, resetPasswordWithToken };

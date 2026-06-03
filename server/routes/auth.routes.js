@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
-const { login, setup } = require('../services/auth.service');
+const { login, setup, requestPasswordReset, resetPasswordWithToken } = require('../services/auth.service');
 
 // POST /api/auth/login
 router.post('/login', authLimiter, async (req, res) => {
@@ -28,6 +28,33 @@ router.post('/setup', async (req, res) => {
     res.json({ data: result, message: 'Admin account created' });
   } catch (err) {
     console.error('[POST /api/auth/setup]', err.message);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    const result = await requestPasswordReset(email);
+    res.json(result);
+  } catch (err) {
+    console.error('[POST /api/auth/forgot-password]', err.message);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token and newPassword required' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const result = await resetPasswordWithToken(token, newPassword);
+    res.json(result);
+  } catch (err) {
+    console.error('[POST /api/auth/reset-password]', err.message);
     res.status(err.status || 500).json({ error: err.message });
   }
 });

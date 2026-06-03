@@ -53,6 +53,10 @@ class APIClient {
   delete(path) {
     return this.request('DELETE', path);
   }
+
+  patch(path, body) {
+    return this.request('PATCH', path, body);
+  }
 }
 
 export const api = new APIClient();

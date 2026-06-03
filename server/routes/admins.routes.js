@@ -2,15 +2,63 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db/pool');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireOwner } = require('../middleware/auth');
 const { logActivity } = require('../services/activity.service');
 const config = require('../config/env');
+const crypto = require('crypto');
+
+// GET /api/admins/me
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = (await pool.query('SELECT id, name, email, role, last_login FROM hub_users WHERE id = $1', [req.user.id])).rows[0];
+    res.json({ data: user });
+  } catch (err) {
+    console.error('[GET /api/admins/me]', err.message);
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
+// POST /api/admins/invite
+router.post('/invite', authMiddleware, requireOwner, async (req, res) => {
+  try {
+    const { email, name, role } = req.body;
+    if (!email || !name || !['admin', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: 'email, name, and valid role required' });
+    }
+    const existing = await pool.query('SELECT id FROM hub_users WHERE email = $1', [email.toLowerCase()]);
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'User already exists' });
+    const tempPassword = crypto.randomBytes(10).toString('hex');
+    const hash = await bcrypt.hash(tempPassword, 12);
+    const result = await pool.query(
+      'INSERT INTO hub_users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name.trim(), email.toLowerCase().trim(), hash, role]
+    );
+    if (config.RESEND_API_KEY) {
+      const { Resend } = require('resend');
+      const resend = new Resend(config.RESEND_API_KEY);
+      await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: email,
+        subject: 'You have been invited to Varshyl Hub',
+        html: `<p>You have been invited to Varshyl Hub as <strong>${role}</strong>.</p><p>Login at <a href="${config.HUB_URL}">${config.HUB_URL}</a></p><p>Email: ${email}<br>Temporary password: <strong>${tempPassword}</strong></p><p>Please change your password after logging in.</p>`
+      });
+    }
+    if (!config.ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
+      config.ADMIN_EMAILS.push(email.toLowerCase().trim());
+    }
+    await logActivity(req.user.id, null, 'user_invited', { email, role }, req.ip);
+    res.json({ data: result.rows[0], message: 'User invited successfully' });
+  } catch (err) {
+    console.error('[POST /api/admins/invite]', err.message);
+    res.status(500).json({ error: 'Failed to invite user' });
+  }
+});
 
 // GET /api/admins
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, email, is_admin, last_login, created_at FROM hub_users ORDER BY created_at'
+      'SELECT id, name, email, role, is_admin, last_login, created_at FROM hub_users ORDER BY created_at'
     );
     res.json({ data: result.rows });
   } catch (err) {
@@ -55,6 +103,26 @@ router.post('/', authMiddleware, async (req, res) => {
     if (err.code === '23505') return res.status(409).json({ error: 'Email already exists' });
     console.error('[POST /api/admins]', err.message);
     res.status(500).json({ error: 'Failed to create admin' });
+  }
+});
+
+// PATCH /api/admins/:id/role
+router.patch('/:id/role', authMiddleware, requireOwner, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot change your own role' });
+    const { role } = req.body;
+    if (!['admin', 'viewer'].includes(role)) return res.status(400).json({ error: 'Role must be admin or viewer' });
+    const result = await pool.query(
+      'UPDATE hub_users SET role = $1 WHERE id = $2 RETURNING id, name, email, role',
+      [role, targetId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'User not found' });
+    await logActivity(req.user.id, null, 'role_changed', { target_id: targetId, new_role: role }, req.ip);
+    res.json({ data: result.rows[0], message: 'Role updated' });
+  } catch (err) {
+    console.error('[PATCH /api/admins/:id/role]', err.message);
+    res.status(500).json({ error: 'Failed to update role' });
   }
 });
 

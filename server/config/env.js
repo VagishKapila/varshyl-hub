@@ -13,6 +13,7 @@ const config = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || null,
   DIGEST_EMAIL: process.env.DIGEST_EMAIL || 'kapilav@varshyl.com',
   RESEND_API_KEY: process.env.RESEND_API_KEY || null,
+  HUB_URL: process.env.HUB_URL || 'https://hub.varshyl.com',
 };
 
 // Validate critical env vars in production

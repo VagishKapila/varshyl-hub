@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../db/pool');
 const config = require('../config/env');
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -14,7 +14,8 @@ function authMiddleware(req, res, next) {
       if (!config.ADMIN_EMAILS.includes(decoded.email?.toLowerCase())) {
         return res.status(403).json({ error: 'Admin access required' });
       }
-      req.user = decoded;
+      const dbUser = (await pool.query('SELECT role FROM hub_users WHERE id = $1', [decoded.id])).rows[0];
+      req.user = { ...decoded, role: dbUser?.role || 'admin' };
       next();
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired token' });
@@ -45,7 +46,13 @@ async function apiKeyAuthMiddleware(req, res, next) {
   }
 }
 
+function requireOwner(req, res, next) {
+  if (req.user.role !== 'owner') return res.status(403).json({ error: 'Owner access required' });
+  next();
+}
+
 module.exports = {
   authMiddleware,
-  apiKeyAuthMiddleware
+  apiKeyAuthMiddleware,
+  requireOwner,
 };

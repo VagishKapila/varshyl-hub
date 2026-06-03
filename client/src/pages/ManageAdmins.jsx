@@ -4,28 +4,44 @@ import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { DataTable } from '../components/common/DataTable';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
+const getRoleBadgeStyle = (role) => {
+  if (role === 'owner') {
+    return { background: '#E6A96C22', color: '#E6A96C', border: '1px solid #E6A96C44' };
+  }
+  if (role === 'admin') {
+    return { background: '#6366f122', color: '#6366f1' };
+  }
+  return { background: '#88888822', color: '#888' };
+};
+
 export const ManageAdmins = () => {
+  const { user: currentUser } = useAuth();
   const { data: admins, refetch: refetchAdmins } = useApi('/api/admins');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'admin' });
+  const [newRole, setNewRole] = useState('admin');
   const [resetPassword, setResetPassword] = useState('');
   const { addToast } = useToast();
 
-  const handleAddAdmin = async (e) => {
+  const isOwner = currentUser?.role === 'owner';
+
+  const handleInviteUser = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/api/admins', formData);
-      addToast('Admin added successfully', 'success');
-      setShowAddModal(false);
-      setFormData({ name: '', email: '', password: '' });
+      await api.post('/api/admins/invite', inviteForm);
+      addToast('User invited successfully', 'success');
+      setShowInviteModal(false);
+      setInviteForm({ name: '', email: '', role: 'admin' });
       refetchAdmins();
     } catch (err) {
-      addToast(err.message || 'Failed to add admin', 'danger');
+      addToast(err.message || 'Failed to invite user', 'danger');
     }
   };
 
@@ -55,6 +71,18 @@ export const ManageAdmins = () => {
     }
   };
 
+  const handleChangeRole = async (e) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/api/admins/${selectedAdmin.id}/role`, { role: newRole });
+      addToast('Role updated successfully', 'success');
+      setShowRoleModal(false);
+      refetchAdmins();
+    } catch (err) {
+      addToast(err.message || 'Failed to update role', 'danger');
+    }
+  };
+
   if (!admins?.data) {
     return <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Loading admins...</div>;
   }
@@ -65,9 +93,11 @@ export const ManageAdmins = () => {
         title="Manage Admins"
         subtitle="Manage administrator accounts"
         actions={
-          <Button size="sm" variant="primary" onClick={() => setShowAddModal(true)}>
-            Add Admin
-          </Button>
+          isOwner ? (
+            <Button size="sm" variant="primary" onClick={() => setShowInviteModal(true)}>
+              Invite User
+            </Button>
+          ) : null
         }
       />
 
@@ -75,6 +105,7 @@ export const ManageAdmins = () => {
         columns={[
           { key: 'name', label: 'Name' },
           { key: 'email', label: 'Email' },
+          { key: 'role', label: 'Role' },
           { key: 'created', label: 'Created' },
           { key: 'actions', label: 'Actions' },
         ]}
@@ -84,13 +115,40 @@ export const ManageAdmins = () => {
             <td>{admin.name}</td>
             <td>{admin.email}</td>
             <td>
+              <span
+                style={{
+                  ...getRoleBadgeStyle(admin.role || 'admin'),
+                  display: 'inline-block',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {admin.role || 'admin'}
+              </span>
+            </td>
+            <td>
               {new Date(admin.created_at).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
               })}
             </td>
-            <td style={{ display: 'flex', gap: '8px' }}>
+            <td style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {isOwner && admin.id !== currentUser?.id && admin.role !== 'owner' && (
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    setSelectedAdmin(admin);
+                    setNewRole(admin.role === 'viewer' ? 'viewer' : 'admin');
+                    setShowRoleModal(true);
+                  }}
+                >
+                  Change Role
+                </Button>
+              )}
               <Button
                 size="xs"
                 onClick={() => {
@@ -112,30 +170,30 @@ export const ManageAdmins = () => {
         )}
       />
 
-      {/* Add Admin Modal */}
+      {/* Invite User Modal */}
       <Modal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Add Admin"
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        title="Invite User"
         actions={
           <>
-            <button className="btn-cancel" onClick={() => setShowAddModal(false)}>
+            <button className="btn-cancel" onClick={() => setShowInviteModal(false)}>
               Cancel
             </button>
-            <button className="btn-submit" onClick={handleAddAdmin}>
-              Add Admin
+            <button className="btn-submit" onClick={handleInviteUser}>
+              Send Invite
             </button>
           </>
         }
       >
-        <form onSubmit={handleAddAdmin}>
+        <form onSubmit={handleInviteUser}>
           <div className="form-group">
             <label>Name</label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Admin name"
+              value={inviteForm.name}
+              onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+              placeholder="User name"
               required
             />
           </div>
@@ -143,21 +201,48 @@ export const ManageAdmins = () => {
             <label>Email</label>
             <input
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="admin@example.com"
+              value={inviteForm.email}
+              onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              placeholder="user@example.com"
               required
             />
           </div>
           <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="••••••••"
-              required
-            />
+            <label>Role</label>
+            <select
+              value={inviteForm.role}
+              onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
+            >
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Change Role Modal */}
+      <Modal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        title={`Change Role for ${selectedAdmin?.name}`}
+        actions={
+          <>
+            <button className="btn-cancel" onClick={() => setShowRoleModal(false)}>
+              Cancel
+            </button>
+            <button className="btn-submit" onClick={handleChangeRole}>
+              Update Role
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleChangeRole}>
+          <div className="form-group">
+            <label>Role</label>
+            <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </select>
           </div>
         </form>
       </Modal>

@@ -186,6 +186,20 @@ async function initDB() {
       attempted_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id, attempted_at DESC);
+
+    -- ═══ Password Reset Tokens ═══
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES hub_users(id) ON DELETE CASCADE,
+      token VARCHAR(200) UNIQUE NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_reset_tokens ON password_reset_tokens(token, used, expires_at);
+
+    ALTER TABLE hub_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin';
+    UPDATE hub_users SET role = 'owner' WHERE role = 'admin' AND id = (SELECT id FROM hub_users ORDER BY created_at ASC LIMIT 1);
     `);
     console.log('[DB] Database initialized');
   } catch (err) {
