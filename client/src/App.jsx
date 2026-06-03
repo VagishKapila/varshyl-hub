@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
@@ -15,7 +15,7 @@ import { Webhooks } from './pages/Webhooks';
 import './styles/globals.css';
 
 function App() {
-  const { user, token, loading } = useAuth();
+  const { token, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -24,7 +24,7 @@ function App() {
   }
 
   if (!token) {
-    return <Login onSuccess={() => {}} />;
+    return <Login />;
   }
 
   const handleNavigate = (page, product = null) => {
