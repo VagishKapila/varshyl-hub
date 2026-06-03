@@ -21,15 +21,17 @@ export const Login = ({ onSuccess }) => {
     try {
       if (isSetup) {
         const result = await api.post('/api/auth/setup', { name, email, password });
-        if (result.data) {
-          login(result.data, result.token);
+        const { token, user } = result.data || {};
+        if (token && user) {
+          login(user, token);
           addToast('Account created successfully!', 'success');
           onSuccess();
         }
       } else {
         const result = await api.post('/api/auth/login', { email, password });
-        if (result.data) {
-          login(result.data, result.token);
+        const { token, user } = result.data || {};
+        if (token && user) {
+          login(user, token);
           addToast('Logged in successfully!', 'success');
           onSuccess();
         }
