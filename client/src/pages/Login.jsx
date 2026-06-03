@@ -42,13 +42,31 @@ export const Login = ({ onSuccess }) => {
     }
   };
 
+  const getLoadingLabel = () => {
+    if (isSetup) return 'Creating account...';
+    return 'Signing in...';
+  };
+
   return (
     <div className="auth-screen">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-icon">📊</div>
+          <svg className="auth-logo-mark" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+            <polygon points="28,4 52,16 52,40 28,52 4,40 4,16" fill="#E6A96C" />
+            <text
+              x="28"
+              y="36"
+              textAnchor="middle"
+              fill="#ffffff"
+              fontSize="24"
+              fontWeight="700"
+              fontFamily="Inter, system-ui, sans-serif"
+            >
+              V
+            </text>
+          </svg>
           <h1>Varshyl Hub</h1>
-          <p>{isSetup ? 'Create your account' : 'CEO Command Center'}</p>
+          <p>{isSetup ? 'Create your account' : 'Founder Control Plane'}</p>
         </div>
 
         {error && <div className="auth-error">{error}</div>}
@@ -92,34 +110,36 @@ export const Login = ({ onSuccess }) => {
             />
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Loading...' : isSetup ? 'Create Account' : 'Sign In'}
+          <button type="submit" className="btn-primary auth-submit" disabled={loading}>
+            {loading ? getLoadingLabel() : isSetup ? 'Create Account' : 'Sign In'}
           </button>
         </form>
 
-        <div id="setup-note" style={{ marginTop: '16px', textAlign: 'center' }}>
+        <div className="auth-toggle-wrap">
           {isSetup ? (
             <>
               Already have an account?{' '}
               <button
+                type="button"
+                className="auth-toggle"
                 onClick={() => {
                   setIsSetup(false);
                   setError('');
                 }}
-                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600' }}
               >
                 Sign In
               </button>
             </>
           ) : (
             <>
-              No account yet?{' '}
+              First time setup?{' '}
               <button
+                type="button"
+                className="auth-toggle"
                 onClick={() => {
                   setIsSetup(true);
                   setError('');
                 }}
-                style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600' }}
               >
                 Create Account
               </button>
