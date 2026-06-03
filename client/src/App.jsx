@@ -9,6 +9,9 @@ import { ProductDetail } from './pages/ProductDetail';
 import { ActivityLog } from './pages/ActivityLog';
 import { ManageAdmins } from './pages/ManageAdmins';
 import { ManageProducts } from './pages/ManageProducts';
+import { Entitlements } from './pages/Entitlements';
+import { NightlyDigest } from './pages/NightlyDigest';
+import { Webhooks } from './pages/Webhooks';
 import './styles/globals.css';
 
 function App() {
@@ -33,8 +36,11 @@ function App() {
     if (currentPage === 'dashboard') return <Dashboard />;
     if (currentPage === 'revenue') return <Revenue />;
     if (currentPage === 'alerts') return <Alerts />;
+    if (currentPage === 'nightly-digest') return <NightlyDigest />;
     if (currentPage === 'activity') return <ActivityLog />;
     if (currentPage === 'admins') return <ManageAdmins />;
+    if (currentPage === 'entitlements') return <Entitlements />;
+    if (currentPage === 'webhooks') return <Webhooks />;
     if (currentPage === 'products-manage') return <ManageProducts />;
     if (currentPage.startsWith('product-')) {
       const slug = currentPage.replace('product-', '');

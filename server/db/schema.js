@@ -112,6 +112,80 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_analytics_product ON analytics_events(product_id);
     CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics_events(event);
     CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics_events(timestamp DESC);
+
+    -- ═══ Entitlements ═══
+    CREATE TABLE IF NOT EXISTS entitlements (
+      id SERIAL PRIMARY KEY,
+      product_slug VARCHAR(50) NOT NULL,
+      email VARCHAR(200) NOT NULL,
+      override_type VARCHAR(50) NOT NULL,
+      discount_pct INTEGER DEFAULT 0,
+      trial_days INTEGER DEFAULT 0,
+      note TEXT,
+      granted_by INTEGER REFERENCES hub_users(id) ON DELETE SET NULL,
+      expires_at TIMESTAMPTZ,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_entitlements_email ON entitlements(product_slug, email);
+    CREATE INDEX IF NOT EXISTS idx_entitlements_active ON entitlements(is_active, expires_at);
+
+    -- ═══ Promo Codes ═══
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(50) UNIQUE NOT NULL,
+      product_slug VARCHAR(50),
+      discount_pct INTEGER DEFAULT 0,
+      trial_days INTEGER DEFAULT 0,
+      max_uses INTEGER DEFAULT NULL,
+      uses_count INTEGER DEFAULT 0,
+      valid_from TIMESTAMPTZ DEFAULT NOW(),
+      valid_until TIMESTAMPTZ,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_by INTEGER REFERENCES hub_users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_promo_codes_code ON promo_codes(code, is_active);
+
+    -- ═══ Nightly Digests ═══
+    CREATE TABLE IF NOT EXISTS nightly_digests (
+      id SERIAL PRIMARY KEY,
+      digest_date DATE UNIQUE NOT NULL,
+      bullets JSONB NOT NULL DEFAULT '[]',
+      raw_data JSONB DEFAULT '{}',
+      email_sent BOOLEAN DEFAULT FALSE,
+      email_sent_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_digests_date ON nightly_digests(digest_date DESC);
+
+    -- ═══ Webhook Registry ═══
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id SERIAL PRIMARY KEY,
+      product_slug VARCHAR(50),
+      name VARCHAR(200) NOT NULL,
+      endpoint_url TEXT NOT NULL,
+      secret VARCHAR(200),
+      events TEXT[] DEFAULT '{}',
+      is_active BOOLEAN DEFAULT TRUE,
+      last_triggered_at TIMESTAMPTZ,
+      created_by INTEGER REFERENCES hub_users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- ═══ Webhook Deliveries ═══
+    CREATE TABLE IF NOT EXISTS webhook_deliveries (
+      id SERIAL PRIMARY KEY,
+      webhook_id INTEGER REFERENCES webhooks(id) ON DELETE CASCADE,
+      event_type VARCHAR(100) NOT NULL,
+      payload JSONB DEFAULT '{}',
+      response_status INTEGER,
+      response_body TEXT,
+      success BOOLEAN DEFAULT FALSE,
+      duration_ms INTEGER,
+      attempted_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id, attempted_at DESC);
     `);
     console.log('[DB] Database initialized');
   } catch (err) {

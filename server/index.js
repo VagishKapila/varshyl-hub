@@ -31,6 +31,9 @@ const chartsRoutes = require('./routes/charts.routes');
 const reportRoutes = require('./routes/report.routes');
 const productApiRoutes = require('./routes/product-api.routes');
 const adminRoutes = require('./routes/admin.routes');
+const entitlementsRoutes = require('./routes/entitlements.routes');
+const digestRoutes = require('./routes/digest.routes');
+const webhooksRoutes = require('./routes/webhooks.routes');
 const formiqWebhook = require('./routes/webhooks/formiq');
 
 const app = express();
@@ -70,6 +73,9 @@ app.use('/api/charts', chartsRoutes);
 app.use('/api/v1/report', reportRoutes);
 app.use('/api/v1', productApiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/entitlements', entitlementsRoutes);
+app.use('/api/digest', digestRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 // Webhook Routes
 app.use('/webhook', formiqWebhook);
@@ -116,6 +122,23 @@ async function start() {
     // Daily retention pruning — run once on startup, then every 24h
     pruneOldSnapshots(90).catch(() => {});
     setInterval(() => pruneOldSnapshots(90).catch(() => {}), 24 * 60 * 60 * 1000);
+
+    const { generateAndSendDigest } = require('./services/digest.service');
+    function scheduleMidnightDigest() {
+      const now = new Date();
+      const nextRun = new Date();
+      nextRun.setUTCHours(7, 0, 0, 0); // midnight PT = 07:00 UTC
+      if (nextRun <= now) nextRun.setUTCDate(nextRun.getUTCDate() + 1);
+      const msUntil = nextRun - now;
+      setTimeout(() => {
+        generateAndSendDigest().catch(err => console.error('[Digest Cron]', err.message));
+        setInterval(() => {
+          generateAndSendDigest().catch(err => console.error('[Digest Cron]', err.message));
+        }, 24 * 60 * 60 * 1000);
+      }, msUntil);
+      console.log(`[Digest Cron] Scheduled. Next run in ${Math.round(msUntil / 60000)} min`);
+    }
+    scheduleMidnightDigest();
   } catch (err) {
     console.error('[FATAL] Startup failed:', err.message);
     process.exit(1);

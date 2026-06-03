@@ -10,6 +10,9 @@ const config = {
     .split(',')
     .map(e => e.trim().toLowerCase()),
   STRIPE_ORG_KEY: process.env.STRIPE_ORG_KEY || null,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || null,
+  DIGEST_EMAIL: process.env.DIGEST_EMAIL || 'vaakapila@gmail.com',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || null,
 };
 
 // Validate critical env vars in production

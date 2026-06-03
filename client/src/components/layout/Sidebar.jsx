@@ -49,6 +49,12 @@ export const Sidebar = ({ currentPage, onNavigate }) => {
         >
           <span className="nav-icon">🔔</span> Alerts
         </button>
+        <button
+          className={`nav-item ${currentPage === 'nightly-digest' ? 'active' : ''}`}
+          onClick={() => onNavigate('nightly-digest')}
+        >
+          <span className="nav-icon">🌙</span> Nightly Digest
+        </button>
 
         {products && products.data && products.data.length > 0 && (
           <>
@@ -77,6 +83,18 @@ export const Sidebar = ({ currentPage, onNavigate }) => {
           onClick={() => onNavigate('admins')}
         >
           <span className="nav-icon">🛡️</span> Manage Admins
+        </button>
+        <button
+          className={`nav-item ${currentPage === 'entitlements' ? 'active' : ''}`}
+          onClick={() => onNavigate('entitlements')}
+        >
+          <span className="nav-icon">🎁</span> Entitlements
+        </button>
+        <button
+          className={`nav-item ${currentPage === 'webhooks' ? 'active' : ''}`}
+          onClick={() => onNavigate('webhooks')}
+        >
+          <span className="nav-icon">🔗</span> Webhooks
         </button>
         <button
           className={`nav-item ${currentPage === 'products-manage' ? 'active' : ''}`}

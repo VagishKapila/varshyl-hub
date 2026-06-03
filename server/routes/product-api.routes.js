@@ -80,4 +80,50 @@ router.get('/config', apiKeyAuthMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/v1/entitlement
+// Products check user entitlements from the hub
+// Auth: X-Api-Key header, query param: ?email=xxx
+router.get('/entitlement', apiKeyAuthMiddleware, async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) {
+      return res.status(400).json({ error: 'email query parameter required' });
+    }
+
+    const result = await pool.query(
+      `SELECT * FROM entitlements
+       WHERE product_slug = $1 AND email = $2 AND is_active = true
+         AND (expires_at IS NULL OR expires_at > NOW())
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.product.slug, email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        data: {
+          has_override: false,
+          override_type: null,
+          discount_pct: 0,
+          trial_days: 0,
+          expires_at: null,
+        },
+      });
+    }
+
+    const row = result.rows[0];
+    res.json({
+      data: {
+        has_override: true,
+        override_type: row.override_type,
+        discount_pct: row.discount_pct,
+        trial_days: row.trial_days,
+        expires_at: row.expires_at,
+      },
+    });
+  } catch (err) {
+    console.error('[GET /api/v1/entitlement]', err.message);
+    res.status(500).json({ error: 'Failed to check entitlement' });
+  }
+});
+
 module.exports = router;
