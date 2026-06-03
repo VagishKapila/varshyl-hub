@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
+    "reset-password": "node server/scripts/reset-admin-password.js",
     "build": "cd client && npm install && npm run build",
     "postinstall": "cd client && npm install && npm run build",
     "lint": "npx eslint server/ reporter-sdk/",
