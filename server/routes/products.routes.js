@@ -25,7 +25,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const products = (await pool.query(
       `SELECT id, slug, name, url, staging_url, stripe_account_id, subscription_amount,
-       is_active, icon, color, api_key, created_at, updated_at,
+       is_active, icon, color, api_key, broadcast_url, created_at, updated_at,
        CASE WHEN db_connection_string IS NOT NULL AND db_connection_string != '' THEN true ELSE false END as has_db_connection
        FROM products ORDER BY name`
     )).rows;
@@ -39,16 +39,16 @@ router.get('/', authMiddleware, async (req, res) => {
 // POST /api/products
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { slug, name, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color } = req.body;
+    const { slug, name, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, broadcast_url } = req.body;
     if (!slug || !name) return res.status(400).json({ error: 'Slug and name required' });
 
     const apiKey = 'vhub_' + crypto.randomBytes(24).toString('hex');
 
     const result = await pool.query(
-      `INSERT INTO products(slug, name, url, staging_url, stripe_account_id, db_connection_string, api_key, subscription_amount, icon, color)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      `INSERT INTO products(slug, name, url, staging_url, stripe_account_id, db_connection_string, api_key, subscription_amount, icon, color, broadcast_url)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [slug.toLowerCase().trim(), name.trim(), url || null, staging_url || null,
-       stripe_account_id || null, db_connection_string || null, apiKey, subscription_amount || 0, icon || '📦', color || '#6366f1']
+       stripe_account_id || null, db_connection_string || null, apiKey, subscription_amount || 0, icon || '📦', color || '#6366f1', broadcast_url || null]
     );
 
     await logActivity(req.user.id, slug, 'product_registered', { name }, req.ip);
@@ -66,7 +66,7 @@ router.put('/:slug', authMiddleware, async (req, res) => {
     const product = (await pool.query('SELECT * FROM products WHERE slug = $1', [req.params.slug])).rows[0];
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
-    const { name, slug: newSlug, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, is_active } = req.body;
+    const { name, slug: newSlug, url, staging_url, stripe_account_id, db_connection_string, subscription_amount, icon, color, is_active, broadcast_url } = req.body;
 
     const result = await pool.query(
       `UPDATE products SET
@@ -79,10 +79,11 @@ router.put('/:slug', authMiddleware, async (req, res) => {
         icon = COALESCE($7, icon),
         color = COALESCE($8, color),
         is_active = COALESCE($9, is_active),
+        broadcast_url = COALESCE($12, broadcast_url),
         slug = COALESCE($11, slug),
         updated_at = NOW()
       WHERE id = $10
-      RETURNING id, slug, name, url, staging_url, stripe_account_id, subscription_amount, is_active, icon, color, created_at, updated_at`,
+      RETURNING id, slug, name, url, staging_url, stripe_account_id, subscription_amount, is_active, icon, color, broadcast_url, created_at, updated_at`,
       [name || null, url !== undefined ? url : null, staging_url !== undefined ? staging_url : null,
        stripe_account_id !== undefined ? stripe_account_id : null,
        db_connection_string !== undefined ? db_connection_string : null,
@@ -90,7 +91,8 @@ router.put('/:slug', authMiddleware, async (req, res) => {
        icon || null, color || null,
        is_active !== undefined ? is_active : null,
        product.id,
-       newSlug || null]
+       newSlug || null,
+       broadcast_url !== undefined ? broadcast_url : null]
     );
 
     await logActivity(req.user.id, req.params.slug, 'product_updated', { fields: Object.keys(req.body) }, req.ip);

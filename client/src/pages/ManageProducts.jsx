@@ -22,6 +22,7 @@ export const ManageProducts = () => {
     icon: '📦',
     color: '#6366f1',
     db_connection_string: '',
+    broadcast_url: '',
   });
   const { addToast } = useToast();
 
@@ -41,6 +42,7 @@ export const ManageProducts = () => {
         icon: '📦',
         color: '#6366f1',
         db_connection_string: '',
+        broadcast_url: '',
       });
       refetchProducts();
     } catch (err) {
@@ -58,6 +60,7 @@ export const ManageProducts = () => {
         stripe_account_id: formData.stripe_account_id,
         icon: formData.icon,
         color: formData.color,
+        broadcast_url: formData.broadcast_url || null,
       });
       addToast('Product updated successfully', 'success');
       setShowEditModal(false);
@@ -152,6 +155,7 @@ export const ManageProducts = () => {
                     icon: product.icon || '📦',
                     color: product.color || '#6366f1',
                     db_connection_string: product.db_connection_string || '',
+                    broadcast_url: product.broadcast_url || '',
                   });
                   setShowEditModal(true);
                 }}
@@ -241,6 +245,19 @@ export const ManageProducts = () => {
             />
           </div>
           <div className="form-group">
+            <label>Broadcast URL (optional)</label>
+            <input
+              type="url"
+              placeholder="https://your-product.com/api/push/broadcast"
+              value={formData.broadcast_url || ''}
+              onChange={(e) => setFormData({ ...formData, broadcast_url: e.target.value })}
+            />
+            <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Hub will POST to this URL to send push notifications.
+              Leave empty to disable notifications for this product.
+            </small>
+          </div>
+          <div className="form-group">
             <label>Staging URL</label>
             <input
               type="url"
@@ -322,6 +339,19 @@ export const ManageProducts = () => {
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
               placeholder="https://example.com"
             />
+          </div>
+          <div className="form-group">
+            <label>Broadcast URL (optional)</label>
+            <input
+              type="url"
+              placeholder="https://your-product.com/api/push/broadcast"
+              value={formData.broadcast_url || ''}
+              onChange={(e) => setFormData({ ...formData, broadcast_url: e.target.value })}
+            />
+            <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Hub will POST to this URL to send push notifications.
+              Leave empty to disable notifications for this product.
+            </small>
           </div>
           <div className="form-group">
             <label>Staging URL</label>

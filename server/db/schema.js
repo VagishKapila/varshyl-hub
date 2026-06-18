@@ -200,6 +200,28 @@ async function initDB() {
 
     ALTER TABLE hub_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin';
     UPDATE hub_users SET role = 'owner' WHERE role = 'admin' AND id = (SELECT id FROM hub_users ORDER BY created_at ASC LIMIT 1);
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS broadcast_url TEXT;
+
+    -- ═══ Notification Broadcasts ═══
+    CREATE TABLE IF NOT EXISTS notification_broadcasts (
+      id SERIAL PRIMARY KEY,
+      product_slug VARCHAR(50) NOT NULL,
+      product_name VARCHAR(200),
+      title VARCHAR(50) NOT NULL,
+      body VARCHAR(150) NOT NULL,
+      segment VARCHAR(100) DEFAULT 'announcements_opted_in',
+      sent_count INTEGER DEFAULT 0,
+      failed_count INTEGER DEFAULT 0,
+      dry_run BOOLEAN DEFAULT FALSE,
+      estimated_recipients INTEGER,
+      status VARCHAR(20) DEFAULT 'pending',
+      error_message TEXT,
+      sent_by INTEGER REFERENCES hub_users(id) ON DELETE SET NULL,
+      sent_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_broadcasts_product
+      ON notification_broadcasts(product_slug, sent_at DESC);
     `);
     console.log('[DB] Database initialized');
   } catch (err) {

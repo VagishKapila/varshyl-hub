@@ -34,6 +34,7 @@ const adminRoutes = require('./routes/admin.routes');
 const entitlementsRoutes = require('./routes/entitlements.routes');
 const digestRoutes = require('./routes/digest.routes');
 const webhooksRoutes = require('./routes/webhooks.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 const formiqWebhook = require('./routes/webhooks/formiq');
 
 const app = express();
@@ -76,6 +77,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/entitlements', entitlementsRoutes);
 app.use('/api/digest', digestRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Webhook Routes
 app.use('/webhook', formiqWebhook);

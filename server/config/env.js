@@ -14,6 +14,7 @@ const config = {
   DIGEST_EMAIL: process.env.DIGEST_EMAIL || 'kapilav@varshyl.com',
   RESEND_API_KEY: process.env.RESEND_API_KEY || null,
   HUB_URL: process.env.HUB_URL || 'https://hub.varshyl.com',
+  HUB_BROADCAST_SECRET: process.env.HUB_BROADCAST_SECRET || null,
 };
 
 // Validate critical env vars in production

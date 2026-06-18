@@ -50,6 +50,12 @@ export const Sidebar = ({ currentPage, onNavigate }) => {
           <span className="nav-icon">🔔</span> Alerts
         </button>
         <button
+          className={`nav-item ${currentPage === 'notifications' ? 'active' : ''}`}
+          onClick={() => onNavigate('notifications')}
+        >
+          <span className="nav-icon">📣</span> Notifications
+        </button>
+        <button
           className={`nav-item ${currentPage === 'nightly-digest' ? 'active' : ''}`}
           onClick={() => onNavigate('nightly-digest')}
         >

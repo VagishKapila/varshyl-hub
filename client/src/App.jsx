@@ -12,6 +12,7 @@ import { ManageProducts } from './pages/ManageProducts';
 import { Entitlements } from './pages/Entitlements';
 import { NightlyDigest } from './pages/NightlyDigest';
 import { Webhooks } from './pages/Webhooks';
+import { Notifications } from './pages/Notifications';
 import './styles/globals.css';
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
     if (currentPage === 'dashboard') return <Dashboard />;
     if (currentPage === 'revenue') return <Revenue />;
     if (currentPage === 'alerts') return <Alerts />;
+    if (currentPage === 'notifications') return <Notifications />;
     if (currentPage === 'nightly-digest') return <NightlyDigest />;
     if (currentPage === 'activity') return <ActivityLog />;
     if (currentPage === 'admins') return <ManageAdmins />;
