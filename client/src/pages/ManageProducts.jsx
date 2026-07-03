@@ -136,9 +136,21 @@ export const ManageProducts = () => {
             </td>
             <td>{product.is_active ? '🟢 Active' : '⭕ Inactive'}</td>
             <td>
-              <code style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                vhub_...{(product.api_key || '').slice(-12)}
-              </code>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <code style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  vhub_...{(product.api_key || '').slice(-12)}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(product.api_key);
+                    addToast('API key copied!', 'success');
+                  }}
+                  className="btn"
+                  style={{ fontSize: '11px', padding: '4px 8px' }}
+                >
+                  Copy Key
+                </button>
+              </div>
             </td>
             <td style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <Button
@@ -387,6 +399,37 @@ export const ManageProducts = () => {
               value={formData.color}
               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
             />
+          </div>
+          <div className="form-group">
+            <label>API Key (read-only)</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                className="form-control"
+                value={selectedProduct?.api_key || ''}
+                readOnly
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  background: 'var(--bg)',
+                  color: 'var(--text-muted)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedProduct?.api_key || '');
+                  addToast('API key copied!', 'success');
+                }}
+                className="btn btn-primary"
+                style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                Copy
+              </button>
+            </div>
+            <small style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+              Use this as VARSHYL_HUB_API_KEY in your product&apos;s Railway env vars
+            </small>
           </div>
         </form>
       </Modal>
