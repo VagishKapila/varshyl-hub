@@ -872,12 +872,15 @@ canvas {
   width: 90%;
   max-width: 520px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
   padding: 24px;
   border-bottom: 1px solid var(--card-border);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -888,6 +891,8 @@ canvas {
 
 .modal-content {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-actions {
@@ -896,6 +901,7 @@ canvas {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .modal-actions button {
