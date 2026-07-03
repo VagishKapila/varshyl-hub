@@ -61,6 +61,9 @@ export const ManageProducts = () => {
         icon: formData.icon,
         color: formData.color,
         broadcast_url: formData.broadcast_url || null,
+        ...(formData.db_connection_string
+          ? { db_connection_string: formData.db_connection_string }
+          : {}),
       });
       addToast('Product updated successfully', 'success');
       setShowEditModal(false);
@@ -257,6 +260,20 @@ export const ManageProducts = () => {
             />
           </div>
           <div className="form-group">
+            <label>Database Connection String (optional)</label>
+            <input
+              type="password"
+              className="form-control"
+              placeholder="postgresql://user:pass@host:5432/db"
+              value={formData.db_connection_string || ''}
+              onChange={(e) => setFormData({ ...formData, db_connection_string: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '12px' }}
+            />
+            <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Used to show individual users in Hub. Never exposed in UI after saving.
+            </small>
+          </div>
+          <div className="form-group">
             <label>Broadcast URL (optional)</label>
             <input
               type="url"
@@ -304,15 +321,6 @@ export const ManageProducts = () => {
               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
             />
           </div>
-          <div className="form-group">
-            <label>Database Connection String</label>
-            <input
-              type="text"
-              value={formData.db_connection_string}
-              onChange={(e) => setFormData({ ...formData, db_connection_string: e.target.value })}
-              placeholder="postgresql://..."
-            />
-          </div>
         </form>
       </Modal>
 
@@ -351,6 +359,20 @@ export const ManageProducts = () => {
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
               placeholder="https://example.com"
             />
+          </div>
+          <div className="form-group">
+            <label>Database Connection String (optional)</label>
+            <input
+              type="password"
+              className="form-control"
+              placeholder="postgresql://user:pass@host:5432/db"
+              value={formData.db_connection_string || ''}
+              onChange={(e) => setFormData({ ...formData, db_connection_string: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '12px' }}
+            />
+            <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Used to show individual users in Hub. Never exposed in UI after saving.
+            </small>
           </div>
           <div className="form-group">
             <label>Broadcast URL (optional)</label>

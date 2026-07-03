@@ -9,7 +9,7 @@ export const Modal = ({ isOpen, onClose, title, children, actions = null }) => {
             <h2>{title}</h2>
           </div>
         )}
-        <div className="modal-content">{children}</div>
+        <div className="modal-content" style={{ maxHeight: '80vh', overflowY: 'auto' }}>{children}</div>
         {actions && <div className="modal-actions">{actions}</div>}
       </div>
     </div>
