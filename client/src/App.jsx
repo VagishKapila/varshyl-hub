@@ -34,7 +34,7 @@ function App() {
   };
 
   const renderPage = () => {
-    if (currentPage === 'dashboard') return <Dashboard />;
+    if (currentPage === 'dashboard') return <Dashboard onNavigate={handleNavigate} />;
     if (currentPage === 'revenue') return <Revenue />;
     if (currentPage === 'alerts') return <Alerts />;
     if (currentPage === 'notifications') return <Notifications />;
@@ -46,7 +46,7 @@ function App() {
     if (currentPage === 'products-manage') return <ManageProducts />;
     if (currentPage.startsWith('product-')) {
       const slug = currentPage.replace('product-', '');
-      return <ProductDetail productSlug={slug} product={selectedProduct} />;
+      return <ProductDetail productSlug={slug} product={selectedProduct} onNavigate={handleNavigate} />;
     }
     return <Dashboard />;
   };

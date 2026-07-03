@@ -6,7 +6,7 @@ import { LineChart } from '../components/charts/LineChart';
 import { Badge } from '../components/common/Badge';
 import { useApi } from '../hooks/useApi';
 
-export const Dashboard = () => {
+export const Dashboard = ({ onNavigate }) => {
   const { data: dashboard, loading: dashLoading } = useApi('/api/dashboard');
   const { data: revenueTrend } = useApi('/api/charts/revenue-trend');
   const { data: userGrowth } = useApi('/api/charts/user-growth');
@@ -54,6 +54,7 @@ export const Dashboard = () => {
   const convRate = k.total_users > 0 ? (((k.pro_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
   const churnRate = k.total_users > 0 ? (((k.churned_users || 0) / k.total_users) * 100).toFixed(1) : '0.0';
   const productsList = dashboard.data.products || [];
+  const firstActiveProduct = productsList.find(({ product: p }) => p.is_active)?.product;
 
   const revenueChartData = formatChartData(revenueTrend?.data);
   const userChartData = formatChartData(userGrowth?.data);
@@ -64,14 +65,30 @@ export const Dashboard = () => {
 
       <div className="kpi-grid">
         <KpiCard label="Total MRR" value={`$${formatNumber(mrrDollars)}`} icon="💰" variant="highlight" />
-        <KpiCard label="Total Users" value={formatNumber(k.total_users)} icon="👥" />
+        <div
+          style={{ cursor: firstActiveProduct ? 'pointer' : 'default' }}
+          onClick={() =>
+            firstActiveProduct &&
+            onNavigate &&
+            onNavigate(`product-${firstActiveProduct.slug}`, firstActiveProduct)
+          }
+          title={firstActiveProduct ? 'Click to view product details' : undefined}
+        >
+          <KpiCard label="Total Users" value={formatNumber(k.total_users)} icon="👥" />
+        </div>
         <KpiCard label="Conversion Rate" value={`${convRate}%`} icon="📈" />
-        <KpiCard
-          label="Active Products"
-          value={k.product_count || 0}
-          sub={`${k.signups_24h || 0} signups today`}
-          icon="📦"
-        />
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate && onNavigate('products-manage')}
+          title="Click to manage products"
+        >
+          <KpiCard
+            label="Active Products"
+            value={k.product_count || 0}
+            sub={`${k.signups_24h || 0} signups today`}
+            icon="📦"
+          />
+        </div>
       </div>
 
       <div className="chart-grid">
@@ -108,7 +125,13 @@ export const Dashboard = () => {
         <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Product Health</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '16px' }}>
           {(healthData?.data || []).map((p) => (
-            <div key={p.slug} className="card" style={{ padding: '20px', textAlign: 'center' }}>
+            <div
+              key={p.slug}
+              className="card"
+              style={{ padding: '20px', textAlign: 'center', cursor: 'pointer' }}
+              onClick={() => onNavigate && onNavigate(`product-${p.slug}`, { slug: p.slug, name: p.name })}
+              title="Click to view product details"
+            >
               <div style={{ fontSize: '24px', marginBottom: '4px' }}>{p.icon}</div>
               <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>{p.name}</div>
               <svg width="80" height="80" viewBox="0 0 80 80" style={{ margin: '0 auto', display: 'block' }}>

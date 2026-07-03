@@ -206,7 +206,21 @@ router.get('/:slug/users', authMiddleware, async (req, res) => {
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
     if (!product.db_connection_string) {
-      return res.status(400).json({ error: 'No database connection configured for this product' });
+      const latest = (await pool.query(
+        'SELECT * FROM metrics_snapshots WHERE product_id = $1 ORDER BY recorded_at DESC LIMIT 1',
+        [product.id]
+      )).rows[0];
+
+      return res.json({
+        data: [],
+        count: latest?.total_users || 0,
+        page: 1,
+        limit: 50,
+        no_db_connection: true,
+        message:
+          'No database connection configured. Add DATABASE_URL in Manage Products to see individual users. Total count from reporter: ' +
+          (latest?.total_users || 0),
+      });
     }
 
     const productPool = getProductPool(product.db_connection_string);
@@ -219,7 +233,7 @@ router.get('/:slug/users', authMiddleware, async (req, res) => {
 
     let query = `SELECT id, name, email, email_verified, blocked, subscription_status,
                   plan_type, trial_start_date, trial_end_date, stripe_customer_id,
-                  created_at FROM users`;
+                  created_at, updated_at FROM users`;
     let countQuery = 'SELECT COUNT(*) FROM users';
     const params = [];
 
