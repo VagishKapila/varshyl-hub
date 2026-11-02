@@ -1,0 +1,10 @@
+# Gitleaks — varshyl-hub
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "GitHub Actions workflow secret references"
+condition = "AND"
+paths = ['''(?i)(^|/)\.github/workflows/.*\.ya?ml$''']
+regexTarget = "match"
+regexes = ['''\$\{\{\s*secrets\.''']
